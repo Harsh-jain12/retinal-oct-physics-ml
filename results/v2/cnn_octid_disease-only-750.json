@@ -1,0 +1,13 @@
+{
+  "manifest": "manifests/octid.csv",
+  "task": "disease-only-750",
+  "classes": [
+    "CSR",
+    "DR",
+    "MH"
+  ],
+  "n": 272,
+  "acc": 0.9338235294117647,
+  "bacc": 0.9395424836601306,
+  "f1": 0.9369764101901916
+}

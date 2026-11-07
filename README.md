@@ -1,2 +1,235 @@
-# Multi-Parametric-Retinal-Diagnostics
- Current Deep Learning models designed for Optical Coher ence Tomography (OCT) often act as unexplainable “black boxes,” ren dering them prone to learning acquisition artifacts rather than true tissue pathology. The present study develops a deterministic, physics based classification engine utilizing multi-parametric tomographic anal ysis.
+# Multi-Parametric Retinal Diagnostics: reproduction
+
+A from-scratch reproduction of *"Multi-Parametric Retinal Diagnostics: A Deterministic Physics-Based Engine for Tomographic Classification"* (Banerjee, Sarkar, Munshi, IIT Gandhinagar). The pipeline:
+
+- OCTID dataset, 517 scans
+- artifact-aware 750×500 normalization and a 15×10 grid of 50×50 cells
+- per-grid KT-1 slope (S) and NMSID Hurst coefficient (H), giving 300 features
+- class-balanced Random Forest on a stratified 80/20 split
+
+## Setup
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate            # Windows  (source .venv/bin/activate on Linux/macOS)
+pip install -r requirements.txt
+python download_data.py           # OCTID from Kaggle -> data/OCTID (no login needed)
+```
+
+## Run
+
+| Step | Command | Output |
+|---|---|---|
+| Feature extraction (about 3.5 min) | `python extract_features.py` | `results/features.csv` |
+| Paper results and Figs 3–7 | `python train_eval.py` | `results/fig*.png`, `results/results.json` |
+| Robustness and confound checks | `python sanity_checks.py` | `results/sanity_checks.json` |
+| Resampling-harmonized variant | `python harmonized_experiment.py` | console |
+
+## Code layout
+
+- `retina/preprocess.py`: Sec. 2. White-wedge mask (I ≥ 240), tight bbox crop, symmetric 3:2 crop, cubic resize to 750×500, residual white set to black, 150 micro-grids (grid id = row·15 + col).
+- `retina/features.py`: Sec. 3.
+  - KT-1: Gaussian σ ∈ {3, 2, 1, 0.1}, robust 99th-percentile N_max, slope of 1/N_max against |W''(0)| ∝ σ².
+  - Hurst: NMSID over all pixel pairs at ⌊distance⌋ = k, for k = 1…25, then the log-log slope.
+- RF settings: 300 trees, max_depth 12, min_samples_leaf 2, `class_weight="balanced"`, `random_state=42`.
+
+### Choices the paper leaves unspecified
+
+| Item | Choice made here |
+|---|---|
+| Intensity scale | [0, 1] |
+| W''(0) | Proportional to σ² (Gaussian window) |
+| NMSID scale range | k = 1…25 (half a grid) |
+| Black background grids | N_max floored at 0.05; H = 0 when NMSID is 0 |
+| Phase-space plot (Fig. 4) | Per-scan mean H against mean S |
+
+## Results
+
+### Paper vs. this reproduction
+
+| Metric | Paper | This repo |
+|---|---|---|
+| Test set | 104 (CSR 21 / DR 22 / MH 20 / N 41) | identical |
+| NORMAL precision / recall | 1.00 / 1.00 | **1.00 / 1.00** (41/41) |
+| Overall accuracy (80/20 split) | 71% | **68.3%** |
+| Overall accuracy (5-fold × 10 CV) | n/a | **72.9 ± 3.4%** (range 65–79%) |
+| Top-15 features that are Hurst | 15/15 | **15/15** |
+| Location of top-15 grids | rows 7–8 (grids 106–133) | **rows 7–8** (grids 106–133) |
+
+The paper's numbers reproduce.
+
+### Caveat: the 100% NORMAL triage is a dataset confound
+
+In OCTID, the NORMAL scans and the disease scans were acquired on different scanners/protocols.
+
+| Original size | CSR | DR | MH | NORMAL |
+|---|---|---|---|---|
+| 500×750 | 68 | 102 | 102 | 0 |
+| 586×879 | 34 | 5 | 0 | 0 |
+| 496×512, 512×512, 496×768, 496×1024, 496×1536 | 0 | 0 | 0 | 206 |
+
+NORMAL files are also all `.jpg`, while disease files are all `.jpeg`.
+
+What `sanity_checks.py` and `harmonized_experiment.py` found:
+
+1. **Image size alone** separates NORMAL from disease with **100%** accuracy.
+2. **Resampling drives H.** Sec. 2.1 cubic-upsamples NORMAL scans by about 1.32× on average, and disease scans by about 1.0×. Upsampling smooths texture and raises H.
+   - Spearman correlation between upsampling factor and mean H: **0.82**.
+3. **Resampling flips the model.** Shrinking the 63 held-out disease scans to 512 px wide and running the identical pipeline makes the trained model call **63/63 of them NORMAL** (before: 0/63).
+4. **The physics features add nothing over plain statistics.** A baseline using only each grid's mean and standard deviation of intensity scores **77.7%** CV accuracy, with NORMAL P/R of 0.98/0.99.
+5. **Harmonizing resampling isn't enough.** Giving every scan the same resampling still leaves NORMAL 100% separable, because of other device signatures (speckle, field of view, compression).
+
+So OCTID cannot validate healthy-vs-disease triage. The defensible signal is the disease-only 3-class problem (CSR / DR / MH), which reaches **56.9%** CV accuracy (chance is 33%).
+
+## Part 2: improved pipeline (v2)
+
+### What v2 adds
+
+**Preprocessing** (`retina/layers.py`):
+- Physical axial resampling to 3.87 µm/px when the scanner spacing is known.
+- Overlay masking applied to every image of a dataset regardless of class, so the mask can't leak the label.
+- Classical RPE/ILM tracing and **retina flattening**.
+- Anatomical bands (inner retina, outer retina, RPE, choroid) × fovea-centred sectors.
+
+**Features** (`retina/features_v2.py`):
+- **Per band × sector texture:** Hurst H plus its fit quality, NMSID curve shape, lacunarity, entropy, KT-1, and **structure-tensor coherence**.
+- **Disease-specific:** thickness profile and foveal dip, gap width (macular hole), fluid area (vitreous-relative threshold, opened mask), hyper-reflective foci, RPE elevation, left/right asymmetry, segmentation QC.
+
+**Evaluation** (`retina/evaluation.py`):
+- Patient-grouped repeated stratified CV with patient-level bootstrap 95% CIs.
+- Models: paper RF, LightGBM, logistic regression, two-stage (normal vs. abnormal, then which disease).
+- Grouped permutation importance.
+
+### Run (v2)
+
+```bash
+python make_manifest.py octid
+python extract_v2.py manifests/octid.csv          # ~4 min; paper + entropy + v2 features
+python evaluate_v2.py results/v2/octid_features.csv
+python analysis_v2.py results/v2/octid_features.csv
+python controls_octid.py
+```
+
+### OCTID results
+
+Patient-grouped 5-fold CV × 3 repeats. Full table: `results/v2/octid_model_grid.md`.
+
+| Task (balanced accuracy, 95% CI) | Paper features + paper RF | Best v2 |
+|---|---|---|
+| 4-class (scanner-confounded) | 0.667 [0.62, 0.70] | **0.848** [0.80, 0.86] (band summary + disease, LightGBM) |
+| CSR / DR / MH | 0.554 [0.52, 0.63] | **0.832** [0.79, 0.87] (band summary + disease, logistic regression) |
+| CSR / DR / MH, 500×750 scans only | 0.504 [0.48, 0.59] | **0.836** [0.76, 0.85] (band summary + disease, logistic regression) |
+
+The last row is the cleanest test: every image has the same original size. On it, interpretable layer-wise features with a *linear* model reach 0.84, against 0.50 for the paper's grid features (chance is 0.33).
+
+### What the controls showed (`controls_octid.py`, `analysis_v2.py`)
+
+**Location claim ("the model found the choroid"):**
+- **The RPE isn't in grid rows 7–8.** In ~95% of scans in every class it lies in grid rows 3–6 (`octid_rpe_position.png`). Rows 7–8 are deep choroid, sclera and the noise floor below it.
+- **Row 8 mostly detects the scanner.** Its importance is +0.198 balanced accuracy with NORMAL included, but only +0.069 among the diseases.
+- **Grid location adds nothing.** Feeding the same values sorted, with no positions, scores as well or better (4-class 0.761, disease-only 0.614).
+
+**Overlay icon:**
+- Disease scans carry a scan-direction icon in the lower-left corner, which falls in grid rows 7–9, columns 0–2.
+- Three paper top-15 grids sit there. Masking the corner in all images removes them from the top 15 and lowers disease-only accuracy from 0.553 to 0.504.
+
+**Entropy:**
+- Hurst–entropy correlation is moderate (median |ρ| 0.50 across paper grids, 0.35 across v2 regions).
+- H's real redundancy is with intensity std (VIF 24.6) and first-scale roughness (VIF 13).
+- Adding entropy back *improves* the paper features: disease-only 0.587 → 0.657 with gradient boosting.
+
+**Importance measures:**
+- Gini and held-out permutation importance share only **1 of 15** top features.
+- On held-out data only 42 of the 300 paper features carry any signal.
+
+**Most useful feature families for CSR / DR / MH** (grouped permutation importance):
+- structure-tensor **coherence** (+0.20)
+- the inner-retina band (+0.16)
+- the outer-retina band (+0.09)
+- the RPE band (+0.08)
+- Hurst H (+0.01)
+
+This supports the paper's own future-work direction (anisotropic coherence), not its fractal-roughness claim.
+
+### Single-scanner datasets: OCTDL and Kermany
+
+These datasets have patient IDs, so the CV is truly patient-grouped. Full tables: `results/v2/octdl_model_grid.md`, `results/v2/kermany_model_grid.md`.
+
+| Dataset and task (balanced accuracy, 95% CI) | Paper features (best model) | Best v2 |
+|---|---|---|
+| OCTDL (Optovue), 7 classes, 2,064 scans / 820 patients | 0.464 | **0.661** [0.60, 0.72] (band summary + disease, logistic regression) |
+| OCTDL, 6 diseases only | 0.445 | **0.648** [0.58, 0.71] (same) |
+| Kermany (Spectralis), 4 classes, 2,401 scans / 864 patients | 0.479 | **0.683** [0.66, 0.71] (v2 all, two-stage LightGBM) |
+| Kermany, 3 diseases only | 0.596 | **0.727** [0.70, 0.75] (band summary + disease, LightGBM) |
+
+On single-scanner data, with no scanner shortcut available, the paper's grid features sit just above chance. The layer-wise v2 features add about 0.13 to 0.20 balanced accuracy.
+
+### Cross-scanner test (`cross_scanner.py`)
+
+Train on Kermany (labels harmonised to NORMAL / DME / AMD; CNV and drusen count as AMD), then test without retraining:
+- on OCTDL, a different scanner, using the same three labels (1,710 scans);
+- on OCTID as normal vs. abnormal.
+
+| Features | Model | Within Kermany | Kermany → OCTDL | OCTDL healthy scans called healthy |
+|---|---|---|---|---|
+| Paper (300 grid H+S) | RF (paper config) | 0.535 | 0.374 | 0 / 332 |
+| Paper (300 grid H+S) | LightGBM | 0.557 | 0.378 | 2 / 332 |
+| v2 band summary + disease | LightGBM | 0.742 | **0.638** | 211 / 332 |
+| v2 all | LightGBM | 0.744 | 0.640 | 200 / 332 |
+
+- **Paper features don't transfer.** On a new scanner they label almost every scan AMD and find essentially no healthy eyes.
+- **v2 transfers partly.** It loses about 0.10 against within-scanner accuracy but stays well above chance (0.33).
+- **OCTID check (normal vs. abnormal):** Kermany-trained v2 gets 0.68–0.72 balanced accuracy, against 0.67–0.68 for paper features. The paper features reach that score by calling nearly everything abnormal (normal recall 0.34).
+- **Caveat:** OCTID's diseases (CSR, MH) aren't among Kermany's classes, so this is only a rough check.
+
+### CNN baseline (`cnn_baseline.py`)
+
+Setup:
+- ImageNet-pretrained ResNet-18, fine-tuned on CPU at 224×224.
+- The same patient-grouped folds as above.
+- 6–8 epochs, no tuning.
+
+| Task (balanced accuracy) | Paper features | Best v2 (interpretable) | ResNet-18 |
+|---|---|---|---|
+| OCTID, CSR / DR / MH, 500×750 only (272 scans) | 0.504 | 0.836 | **0.940** |
+| Kermany, 4 classes (patient-grouped 5-fold) | 0.479 | 0.683 | **0.864** |
+| Kermany → OCTDL (different scanner, NORMAL / DME / AMD) | 0.378 | 0.640 | **0.932** |
+
+**The CNN wins clearly, including across scanners.**
+- An honest framing of the physics approach is *interpretable and training-light*, not *more accurate*.
+- The v2 features close about half the gap between the paper features and a CNN.
+- **Next step:** use them alongside a CNN, for example as an explanation layer or in a hybrid model, rather than in place of one.
+
+### Reproduce the new-dataset results
+
+C: had only ~15 GB free, and the Kermany Kaggle archive is 11.6 GB. So only a 600-per-class patient subset is extracted from the zip; the archive can then be deleted.
+
+```bash
+python download_data.py octdl && python make_manifest.py octdl
+python download_data.py kermany            # or, on low disk, after the zip downloads:
+python download_data.py kermany-subset ~/.cache/kagglehub/datasets/paultimothymooney/kermany2018/2.archive
+python make_manifest.py kermany --per-class 600
+python extract_v2.py manifests/octdl.csv && python extract_v2.py manifests/kermany.csv
+python evaluate_v2.py results/v2/octdl_features.csv --repeats 2
+python evaluate_v2.py results/v2/kermany_features.csv --repeats 2
+python cross_scanner.py --train results/v2/kermany_features.csv     --test results/v2/octdl_features.csv --octid results/v2/octid_features.csv --repeats 2
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+python cnn_baseline.py manifests/octid.csv --task disease-only-750 --folds 5 --epochs 8
+python cnn_baseline.py manifests/kermany.csv --external manifests/octdl.csv --harmonise --epochs 6
+python cnn_baseline.py manifests/kermany.csv --task all --folds 5 --epochs 6
+```
+
+### Known limitations
+
+- **No patient IDs in OCTID.** Each image is its own group, so two scans of the same eye could land in train and test. The Kermany and OCTDL results use real patient IDs.
+- **No pixel spacing for OCTID.** Its axial spacing is unknown (exported screenshots), so it is resampled by aspect ratio only.
+- **Imperfect segmentation.** The classical RPE/ILM tracer fails on some severe cases (large cysts, extreme tilt). Per-scan QC features record this.
+
+- **Kermany subset.** 2,401 of ~84k scans (at most 3 per patient), because of disk space.
+- **No hyperparameter tuning** for either the CNN or v2. Both could improve.
+
+## Citation
+
+- Kermany D. et al. *Identifying medical diagnoses and treatable diseases by image-based deep learning.* Cell 172(5), 2018. Data: https://data.mendeley.com/datasets/rscbjbr9sj
+- Kulyabin M. et al. *OCTDL: Optical Coherence Tomography Dataset for Image-Based Deep Learning Methods.* Scientific Data 11, 2024 (arXiv:2312.08255). Data: https://zenodo.org/records/10839556
+- Gholami P., Roy P., Parthasarathy M.K., Lakshminarayanan V. *OCTID: Optical Coherence Tomography Image Database*. arXiv:1812.07056.

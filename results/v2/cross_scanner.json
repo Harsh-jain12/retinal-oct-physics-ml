@@ -1,0 +1,374 @@
+[
+  {
+    "features": "paper (300 grid H+S)",
+    "model": "RF (paper config)",
+    "within_bacc": 0.5353446698641425,
+    "within_ci": [
+      0.5160803449270439,
+      0.5694665947414996
+    ],
+    "ext_bacc": 0.3741054504661328,
+    "ext_acc": 0.5362573099415204,
+    "ext_cm": [
+      [
+        0,
+        82,
+        250
+      ],
+      [
+        1,
+        63,
+        83
+      ],
+      [
+        8,
+        369,
+        854
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.6650797614959573,
+    "octid_normal_recall": 0.33980582524271846,
+    "octid_abnormal_recall": 0.9903536977491961
+  },
+  {
+    "features": "paper (300 grid H+S)",
+    "model": "Gradient boosting",
+    "within_bacc": 0.5565635212889481,
+    "within_ci": [
+      0.533545151307388,
+      0.5843547798942726
+    ],
+    "ext_bacc": 0.3782134289907521,
+    "ext_acc": 0.5678362573099415,
+    "ext_cm": [
+      [
+        2,
+        34,
+        296
+      ],
+      [
+        0,
+        57,
+        90
+      ],
+      [
+        11,
+        308,
+        912
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.6821012705647301,
+    "octid_normal_recall": 0.38349514563106796,
+    "octid_abnormal_recall": 0.9807073954983923
+  },
+  {
+    "features": "paper row-summary (40)",
+    "model": "RF (paper config)",
+    "within_bacc": 0.5158805631654766,
+    "within_ci": [
+      0.4925652984715225,
+      0.5438704394444493
+    ],
+    "ext_bacc": 0.3512142870126039,
+    "ext_acc": 0.5111111111111111,
+    "ext_cm": [
+      [
+        1,
+        42,
+        289
+      ],
+      [
+        0,
+        57,
+        90
+      ],
+      [
+        6,
+        409,
+        816
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.6594059251396996,
+    "octid_normal_recall": 0.32524271844660196,
+    "octid_abnormal_recall": 0.9935691318327974
+  },
+  {
+    "features": "paper row-summary (40)",
+    "model": "Gradient boosting",
+    "within_bacc": 0.5004442820820562,
+    "within_ci": [
+      0.47850262453496967,
+      0.5264014783519685
+    ],
+    "ext_bacc": 0.35754388209957266,
+    "ext_acc": 0.5286549707602339,
+    "ext_cm": [
+      [
+        4,
+        43,
+        285
+      ],
+      [
+        4,
+        55,
+        88
+      ],
+      [
+        13,
+        373,
+        845
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.6601941747572816,
+    "octid_normal_recall": 0.32038834951456313,
+    "octid_abnormal_recall": 1.0
+  },
+  {
+    "features": "v2 texture (band x sector)",
+    "model": "RF (paper config)",
+    "within_bacc": 0.7123898186403816,
+    "within_ci": [
+      0.6882778810060877,
+      0.7367040950185448
+    ],
+    "ext_bacc": 0.5237450795128878,
+    "ext_acc": 0.7502923976608187,
+    "ext_cm": [
+      [
+        137,
+        0,
+        195
+      ],
+      [
+        4,
+        38,
+        105
+      ],
+      [
+        32,
+        91,
+        1108
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.697124840008741,
+    "octid_normal_recall": 0.8058252427184466,
+    "octid_abnormal_recall": 0.5884244372990354
+  },
+  {
+    "features": "v2 texture (band x sector)",
+    "model": "Gradient boosting",
+    "within_bacc": 0.7268111017066009,
+    "within_ci": [
+      0.7101607990928078,
+      0.7568156759981637
+    ],
+    "ext_bacc": 0.6275870404145136,
+    "ext_acc": 0.775438596491228,
+    "ext_cm": [
+      [
+        211,
+        3,
+        118
+      ],
+      [
+        10,
+        57,
+        80
+      ],
+      [
+        67,
+        106,
+        1058
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.6481987325570505,
+    "octid_normal_recall": 0.8398058252427184,
+    "octid_abnormal_recall": 0.4565916398713826
+  },
+  {
+    "features": "v2 disease-specific",
+    "model": "RF (paper config)",
+    "within_bacc": 0.6240151296034538,
+    "within_ci": [
+      0.5973530803737428,
+      0.6503503928262503
+    ],
+    "ext_bacc": 0.4477980279900972,
+    "ext_acc": 0.6046783625730994,
+    "ext_cm": [
+      [
+        11,
+        33,
+        288
+      ],
+      [
+        4,
+        80,
+        63
+      ],
+      [
+        12,
+        276,
+        943
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.5537414541254331,
+    "octid_normal_recall": 0.21359223300970873,
+    "octid_abnormal_recall": 0.8938906752411575
+  },
+  {
+    "features": "v2 disease-specific",
+    "model": "Gradient boosting",
+    "within_bacc": 0.6311147559332212,
+    "within_ci": [
+      0.6035504658232999,
+      0.6522428207023887
+    ],
+    "ext_bacc": 0.44166250927437484,
+    "ext_acc": 0.6368421052631579,
+    "ext_cm": [
+      [
+        15,
+        34,
+        283
+      ],
+      [
+        4,
+        68,
+        75
+      ],
+      [
+        16,
+        209,
+        1006
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.5655495894858428,
+    "octid_normal_recall": 0.6359223300970874,
+    "octid_abnormal_recall": 0.49517684887459806
+  },
+  {
+    "features": "v2 band-summary + disease",
+    "model": "RF (paper config)",
+    "within_bacc": 0.7162013583541313,
+    "within_ci": [
+      0.6859424541081529,
+      0.7354247800764742
+    ],
+    "ext_bacc": 0.5028636570852784,
+    "ext_acc": 0.7005847953216374,
+    "ext_cm": [
+      [
+        80,
+        3,
+        249
+      ],
+      [
+        1,
+        60,
+        86
+      ],
+      [
+        12,
+        161,
+        1058
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.7226922236443667,
+    "octid_normal_recall": 0.7572815533980582,
+    "octid_abnormal_recall": 0.6881028938906752
+  },
+  {
+    "features": "v2 band-summary + disease",
+    "model": "Gradient boosting",
+    "within_bacc": 0.7418498886272202,
+    "within_ci": [
+      0.7203516991783093,
+      0.7704598629592321
+    ],
+    "ext_bacc": 0.6384496578687524,
+    "ext_acc": 0.7514619883040936,
+    "ext_cm": [
+      [
+        211,
+        11,
+        110
+      ],
+      [
+        5,
+        68,
+        74
+      ],
+      [
+        52,
+        173,
+        1006
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.6802906377797896,
+    "octid_normal_recall": 0.8203883495145631,
+    "octid_abnormal_recall": 0.5401929260450161
+  },
+  {
+    "features": "v2 all",
+    "model": "RF (paper config)",
+    "within_bacc": 0.7235408800314267,
+    "within_ci": [
+      0.6999002966942033,
+      0.7506694980851836
+    ],
+    "ext_bacc": 0.5463071304099336,
+    "ext_acc": 0.7263157894736842,
+    "ext_cm": [
+      [
+        123,
+        2,
+        207
+      ],
+      [
+        1,
+        60,
+        86
+      ],
+      [
+        28,
+        144,
+        1059
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.6818359192083164,
+    "octid_normal_recall": 0.8009708737864077,
+    "octid_abnormal_recall": 0.5627009646302251
+  },
+  {
+    "features": "v2 all",
+    "model": "Gradient boosting",
+    "within_bacc": 0.7435156825700937,
+    "within_ci": [
+      0.719419229621232,
+      0.770350060098469
+    ],
+    "ext_bacc": 0.6400972624506659,
+    "ext_acc": 0.7508771929824561,
+    "ext_cm": [
+      [
+        200,
+        9,
+        123
+      ],
+      [
+        6,
+        73,
+        68
+      ],
+      [
+        55,
+        165,
+        1011
+      ]
+    ],
+    "octid_normal_vs_abnormal_bacc": 0.6400664939281366,
+    "octid_normal_recall": 0.8106796116504854,
+    "octid_abnormal_recall": 0.4694533762057878
+  }
+]

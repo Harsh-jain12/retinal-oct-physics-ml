@@ -1,0 +1,14 @@
+{
+  "manifest": "manifests/kermany.csv",
+  "task": "all",
+  "classes": [
+    "CNV",
+    "DME",
+    "DRUSEN",
+    "NORMAL"
+  ],
+  "n": 2401,
+  "acc": 0.8638067471886713,
+  "bacc": 0.8637550317931368,
+  "f1": 0.8627587748250733
+}

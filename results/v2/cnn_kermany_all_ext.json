@@ -1,0 +1,15 @@
+{
+  "manifest": "manifests/kermany.csv",
+  "task": "all",
+  "classes": [
+    "AMD",
+    "DME",
+    "NORMAL"
+  ],
+  "n": 2401,
+  "external": {
+    "manifest": "manifests/octdl.csv",
+    "bacc": 0.9321409878976108,
+    "acc": 0.9315789473684211
+  }
+}
