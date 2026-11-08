@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, confusion_matrix, recall_score
 
-from retina.evaluation import (feature_sets, add_row_summaries, add_band_summaries, hgb, rf_paper,
+from retina.evaluation import (feature_sets, add_row_summaries, add_band_summaries, hgb, rf_paper, logreg,
                                repeated_cv)
 
 warnings.filterwarnings("ignore")
@@ -49,6 +49,8 @@ def main():
     ap.add_argument("--test", help="external dataset with NORMAL/DME/AMD-type labels (e.g. OCTDL)")
     ap.add_argument("--octid", help="OCTID features for NORMAL-vs-abnormal transfer")
     ap.add_argument("--repeats", type=int, default=3)
+    ap.add_argument("--sets", nargs="*", default=SETS)
+    ap.add_argument("--out", default="results/v2/cross_scanner.json")
     a = ap.parse_args()
     classes = ["NORMAL", "DME", "AMD"]
     tr = prep(a.train, classes)
@@ -56,10 +58,10 @@ def main():
     oc = pd.read_csv(a.octid) if a.octid else None
     if oc is not None:
         oc = add_band_summaries(add_row_summaries(oc))
-    fsets = {k: v for k, v in feature_sets(tr).items() if k in SETS}
+    fsets = {k: v for k, v in feature_sets(tr).items() if k in a.sets}
     res = []
     for sname, cols in fsets.items():
-        for mname, fn in [("RF (paper config)", rf_paper), ("Gradient boosting", hgb)]:
+        for mname, fn in [("RF (paper config)", rf_paper), ("Gradient boosting", hgb), ("Logistic regression", logreg)]:
             Xtr, ytr = X_of(tr, cols), tr.label.values
             within, _ = repeated_cv(fn, Xtr, ytr, tr.patient.values, repeats=a.repeats)
             m = fn(0).fit(Xtr, ytr)
@@ -81,7 +83,7 @@ def main():
                   + (f" | OCTDL bacc {row['ext_bacc']:.3f}" if te is not None else "")
                   + (f" | OCTID normal-vs-abnormal bacc {row['octid_normal_vs_abnormal_bacc']:.3f}"
                      if oc is not None else ""), flush=True)
-    out = Path("results/v2/cross_scanner.json")
+    out = Path(a.out)
     json.dump(res, open(out, "w"), indent=2, default=float)
     print("saved", out)
 

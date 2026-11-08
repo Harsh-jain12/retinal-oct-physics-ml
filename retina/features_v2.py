@@ -149,6 +149,20 @@ def texture_features(f):
     return out
 
 
+def v2_fluid_mask(f, ret, sm, frac=0.2):
+    """v2 fixed-fraction fluid rule: darker than vitreous + 20% of (retina median - vitreous)."""
+    Hc = f.img.shape[0]
+    rows = np.arange(Hc)[:, None]
+    rmed = np.median(sm[ret])
+    # fluid is about as dark as the vitreous, so threshold relative to this scan's vitreous level
+    vit = (rows < np.where(f.col_ok, f.ilm - 6, -np.inf)[None]) & f.valid
+    bg = np.median(sm[vit]) if vit.sum() > 200 else np.percentile(sm[ret], 1)
+    dark = ret & (sm < bg + frac * (rmed - bg))
+    # opening removes thin dark normal layers (e.g. outer nuclear layer); fluid pockets survive
+    return cv2.morphologyEx(dark.astype(np.uint8), cv2.MORPH_OPEN,
+                            cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))).astype(bool)
+
+
 def disease_features(f):
     """Thickness profile, fluid, hyper-reflective foci, RPE elevation, gaps, symmetry, QC."""
     W = f.img.shape[1]
@@ -184,14 +198,7 @@ def disease_features(f):
     ret = (rows > np.where(f.col_ok, f.ilm, np.inf)[None]) & (rows < np.where(f.col_ok, f.rpe - 4, -np.inf)[None]) & f.valid
     sm = gaussian_filter(f.img, 2)
     if ret.sum() > 200:
-        rmed = np.median(sm[ret])
-        # fluid is about as dark as the vitreous, so threshold relative to this scan's vitreous level
-        vit = (rows < np.where(f.col_ok, f.ilm - 6, -np.inf)[None]) & f.valid
-        bg = np.median(sm[vit]) if vit.sum() > 200 else np.percentile(sm[ret], 1)
-        dark = ret & (sm < bg + 0.2 * (rmed - bg))
-        # opening removes thin dark normal layers (e.g. outer nuclear layer); fluid pockets survive
-        dark = cv2.morphologyEx(dark.astype(np.uint8), cv2.MORPH_OPEN,
-                                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))).astype(bool)
+        dark = v2_fluid_mask(f, ret, sm)
         lab, n = label(dark)
         sizes = np.bincount(lab.ravel())[1:] if n else np.array([0])
         sizes = sizes[sizes >= 20] if n else sizes

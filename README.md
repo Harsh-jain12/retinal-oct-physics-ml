@@ -219,7 +219,141 @@ python cnn_baseline.py manifests/kermany.csv --external manifests/octdl.csv --ha
 python cnn_baseline.py manifests/kermany.csv --task all --folds 5 --epochs 6
 ```
 
-### Known limitations
+## Part 3: NDT-inspired features
+
+OCT is optical pulse-echo testing:
+- each image column is an A-scan;
+- the RPE is the "back-wall echo";
+- fluid, holes and exudates are "defect echoes".
+
+`retina/features_ndt.py` adds 56 `ndt_*` features on top of v2, computed on v2's flattened scan.
+
+These are display images (log-compressed JPEGs), so every quantity is **relative**, normalised to references inside the same image: the vitreous level and the RPE echo level. Raw reference levels are kept only as `ndtqc_*` QC columns and never enter a model.
+
+| Family | What it measures | NDT analogue |
+|---|---|---|
+| `att_*`, `trans_*` | Depth slope of the log-display A-scan per band; light reaching the choroid | Attenuation coefficient (Beer–Lambert, dB/mm) |
+| `ic_*` | Michelson contrast of the ILM and RPE echoes against neighbouring layers | Reflection coefficient / impedance mismatch |
+| `hm_*` | Defect width and fluid-pocket size at half-maximum between the vitreous and local tissue | 6 dB drop flaw sizing |
+| `sh_*`, `hypertrans` | Signal loss in the choroid under a column (overall and under bright foci) | Shadowing behind a strong reflector |
+| `cnr_*` | Retina vs. vitreous, RPE vs. choroid, fluid pocket vs. surround | SNR / CNR / detectability |
+| `spk_*` | Nakagami m and speckle contrast after removing layer structure | Grain-noise statistics |
+
+**Fluid is defined as anechoic.** A pocket must be darker than halfway between the vitreous and the local *darkest tissue* level (25th percentile of the retina column). An earlier median-based reference also flagged the normal outer nuclear layer; the QC figure caught this.
+
+```bash
+python extract_ndt.py manifests/octid.csv      # also octdl, kermany -> results/v3/<name>_features.csv
+python ndt_checks.py                           # QC overlays + scanner-robustness check
+```
+
+### First check: class signal vs. scanner dependence
+
+`results/v3/ndt_scanner_vs_signal.png` compares two quantities per feature family:
+- **Class signal:** Kruskal–Wallis ε² across the 4 Kermany classes.
+- **Scanner shift:** |Cohen's d| between *healthy* Kermany and *healthy* OCTDL eyes. Same anatomy on a different scanner, so any difference is a scanner signature.
+
+Findings:
+- **Half-max sizing is the best NDT family:** high signal and the lowest scanner shift. For example, fluid height has ε² 0.20 and |d| 0.05.
+- **Also low-shift:** attenuation and shadowing.
+- **Strongest but scanner-dependent:** RPE-vs-choroid contrast, choroid transmission and retina-vs-vitreous CNR (ε² ≈ 0.22 but |d| ≈ 1.5). These are exactly the kind of features that broke the original paper, so the cross-scanner test will decide whether they stay.
+- **Paper grid features have both the lowest signal and a moderate scanner shift.**
+
+### Step 2: does NDT add to v2?
+
+`evaluate_v2.py` runs on `results/v3/*_features.csv`; outputs are `results/v3/*_model_grid.md`, `cross_scanner.json`, `ndt_importance.*` and `ndt_paired_test.json`.
+
+**Best balanced accuracy per feature set** (patient-grouped CV, best of RF / LightGBM / logistic regression / two-stage):
+
+| Task | v2 band summary + disease | + NDT | + NDT (scanner-robust) | NDT only |
+|---|---|---|---|---|
+| OCTID CSR / DR / MH, 500×750 | 0.822 | **0.855** | 0.849 | 0.764 |
+| OCTDL 7-class | 0.661 | **0.689** | 0.678 | 0.616 |
+| OCTDL 6 diseases | 0.648 | **0.685** | **0.685** | 0.614 |
+| Kermany 4-class | 0.683 | 0.687 | **0.688** | 0.620 |
+| Kermany CNV / DME / drusen | 0.727 | 0.723 | **0.735** | 0.681 |
+| Kermany → OCTDL (cross-scanner) | 0.669 | 0.677 | **0.680** | 0.542 |
+
+**Paired test** (`ndt_paired_test.py`): same model and same folds, with vs. without NDT, over 3 repeats.
+- The mean difference is positive in **22 of 24** model × task comparisons. Typical size is **+0.01 to +0.03**.
+- The patient-level bootstrap 95% CI excludes zero in 10 of 24.
+- The bootstrap is on repeat 0's out-of-fold predictions. There is no multiple-comparison correction.
+- Largest consistent gains:
+  - OCTID diseases with LightGBM: +0.03 in all 3 repeats.
+  - OCTDL 7-class with LightGBM: +0.03, CI [+0.02, +0.06].
+  - OCTDL diseases with logistic regression: +0.03.
+- **Kermany gains little** (≤ +0.02).
+
+**Grouped permutation importance** (`ndt_importance.png`):
+- The **v2 bands** (outer, inner, RPE) remain the strongest families everywhere.
+- **NDT attenuation** ranks 3rd on OCTDL (+0.105).
+- **NDT interface contrast** ranks 3rd on Kermany (+0.049).
+- **Shadowing and SNR/CNR** contribute almost nothing once v2 is present.
+- **Half-max sizing** has strong single-feature signal but largely overlaps v2's thickness and fluid features.
+
+**Verdict:** NDT features are a small, mostly consistent addition (+1 to +3 points), not a step change.
+- Attenuation and interface contrast carry information v2 lacked.
+- Dropping the 8 scanner-dependent NDT features costs nothing and sometimes helps, including across scanners.
+- The CNN gap remains: Kermany → OCTDL is 0.68 here vs. 0.93 for ResNet-18.
+
+
+### Step 3: probability of detection (MAPOD) for the fluid detectors
+
+In ultrasonic NDT, an inspection procedure is qualified by inserting flaws of known size and measuring the probability of detection (POD) against size. The standard method is hit/miss analysis (MIL-HDBK-1823A), which reports **a90**: the flaw size found 90% of the time. `mapod.py` applies the same idea to the two fluid detectors:
+
+- **Lesions:** fully anechoic fluid pockets, filled with a patch of the scan's own vitreous (keeping its speckle and noise floor), are inserted into **60 healthy scans per scanner** (Kermany/Spectralis and OCTDL/Optovue). Three types:
+  - an intraretinal cyst, round in µm (assuming a lateral spacing of 6 mm / 512 columns);
+  - an intraretinal cyst, round on screen, which is how cysts look in these display images;
+  - a subretinal fluid lens on top of the RPE, 8× wider than tall.
+- **Sizes:** 14 heights from 8 to 160 µm, 2 random placements each, for about 1,600 insertions per lesion type and scanner.
+- **Detectors:** the NDT half-max anechoic rule (`features_ndt.fluid_mask`) vs. v2's fixed-fraction dark rule (`features_v2.v2_fluid_mask`).
+- **Hit:** at least 30% of the lesion is newly flagged.
+- **False call:** any fluid component flagged on the clean healthy scan.
+- **Fit:** a probit on ln(a). a90/95 is the 95th percentile of a90 over a patient bootstrap.
+
+**At default thresholds** (`mapod_pod.png`), in µm (a90/95 in brackets):
+
+| Scanner | Lesion | NDT half-max | v2 fixed-fraction | NDT − v2 |
+|---|---|---|---|---|
+| Spectralis | cyst, round in µm | 139 (149) | 133 (138) | +6 |
+| Spectralis | cyst, round on screen | **56** (62) | 61 (65) | −5 |
+| Spectralis | subretinal fluid | **52** (59) | 57 (64) | −5 |
+| Optovue | cyst, round in µm | 128 (139) | 123 (128) | +5 |
+| Optovue | cyst, round on screen | **45** (47) | 50 (52) | −5 |
+| Optovue | subretinal fluid | **54** (60) | 55 (58) | −1 |
+
+Healthy scans with at least one false call: **NDT 30% vs. v2 15%** on Spectralis, **47% vs. 32%** on Optovue.
+
+At default thresholds, NDT finds pockets about 5 µm smaller, but it also calls fluid on more healthy eyes. A detector that calls more will always detect more, so these numbers alone don't show NDT is better.
+
+**At a matched false-call rate** (`mapod_sweep.py` → `mapod_tradeoff.png`): each detector's threshold fraction is swept (6 values each) and a90 is plotted against the false-call rate.
+
+| a90 (µm) at matched false-call rate | 10% | 20% | 30% |
+|---|---|---|---|
+| Spectralis cyst: NDT / v2 | 77 / 78 | 60 / 60 | 54 / 54 |
+| Spectralis SRF: NDT / v2 | **63** / 71 | 52 / 54 | 48 / 49 |
+| Optovue cyst: NDT / v2 | 64 / **61** | **55** / 58 | **51** / 55 |
+| Optovue SRF: NDT / v2 | **52** / 56 | **43** / 54 | **42** / 52 |
+
+What this shows:
+- **On Spectralis the two trade-off curves almost overlap.** The exception is subretinal fluid at the strictest setting (10% false calls: 63 vs. 71 µm). On these clean, high-contrast scans the threshold rule matters much less than where it is set.
+- **On Optovue, NDT half-max is better at equal false calls**, by about 4–11 µm for subretinal fluid and up to 4 µm for cysts. Optovue has a different speckle and contrast profile, and the half-max reference adapts to each scan's own darkest tissue, which is the reason the 6 dB rule is used in ultrasonic sizing.
+- **The shipped defaults sit at different operating points.** NDT's 0.4 runs at about twice v2's false-call rate. If false calls matter more than sensitivity, NDT at about 0.3 matches v2's false-call rate with similar or better POD.
+- **Lateral resolution limits small cysts.** If cysts are round in µm, they are only a few columns wide, and both detectors' lateral smoothing and 5×5 opening remove them: a90 rises to about 130 µm. The real value lies between the "round in µm" and "round on screen" rows, depending on the true lateral spacing.
+- **Sizing** (`mapod_sizing.png`): half-max sizes subretinal fluid almost exactly (median measured/true height 0.97–0.98) vs. 0.92 for v2, and screen-round cysts at 0.89–0.91 vs. 0.83–0.85. Cysts that are round in µm are undersized by both (about 0.74).
+- **A failure mode of local referencing:** a very large subretinal lens (≥ 150 µm) on Optovue is missed 7% of the time by NDT, because the pocket fills the column and drags down the "darkest tissue" reference. v2 never misses these.
+- **Limits of the simulation:**
+  - Lesions are painted onto the flattened canvas, so segmentation is taken as given.
+  - Tissue is not displaced the way real fluid displaces it.
+  - Lesions are fully anechoic; real cysts can contain some reflectivity.
+  - Read POD here as a relative comparison of detectors, not a clinical detection limit.
+
+```bash
+python mapod.py          # ~3 min: POD curves, sizing, examples   -> results/v3/mapod*.png, mapod.json
+python mapod_sweep.py    # ~8 min: threshold sweep, matched FCR   -> results/v3/mapod_tradeoff.png, mapod_sweep.json
+```
+
+
+## Known limitations
 
 - **No patient IDs in OCTID.** Each image is its own group, so two scans of the same eye could land in train and test. The Kermany and OCTDL results use real patient IDs.
 - **No pixel spacing for OCTID.** Its axial spacing is unknown (exported screenshots), so it is resampled by aspect ratio only.
@@ -227,6 +361,7 @@ python cnn_baseline.py manifests/kermany.csv --task all --folds 5 --epochs 6
 
 - **Kermany subset.** 2,401 of ~84k scans (at most 3 per patient), because of disk space.
 - **No hyperparameter tuning** for either the CNN or v2. Both could improve.
+- **Synthetic lesions (MAPOD).** These are painted, fully anechoic pockets on the flattened canvas, with an assumed lateral spacing. The POD numbers compare detectors; they are not clinical detection limits.
 
 ## Citation
 

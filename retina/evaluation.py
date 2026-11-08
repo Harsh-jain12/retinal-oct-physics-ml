@@ -14,6 +14,12 @@ from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+# NDT features whose healthy-eye distribution differs strongly between scanners (|Cohen's d| > 0.8,
+# healthy Kermany vs healthy OCTDL; see ndt_checks.py). Chosen using OCTDL healthy scans, so the
+# Kermany -> OCTDL score of the "robust" sets is mildly optimistic (transductive selection).
+NDT_SCANNER_DEPENDENT = ("ndt_cnr_retina_vit", "ndt_ic_rpe_below_med", "ndt_trans_med", "ndt_cnr_rpe_choroid",
+                         "ndt_ic_rpe_above_med", "ndt_ic_rpe_below_c_med", "ndt_ic_rpe_above_c_med",
+                         "ndt_sh_under_foci")
 DISEASE_PREFIX = ("thk_", "fovea_", "gap_", "thin_", "fluid_", "hrf_", "retina_", "rpe_")
 TEX_KINDS = ["H", "H_r2", "nmsid1", "nmsid_ratio", "lac4", "lac8", "entropy", "mean", "std", "kt1", "coh"]
 BANDS = ["inner", "outer", "rpe", "choroid"]
@@ -55,6 +61,9 @@ def feature_sets(df):
     tex = [x for x in c if x.startswith("tex_")]
     dis = [x for x in c if x.startswith(DISEASE_PREFIX)]
     band = [x for x in c if x.startswith("band_")]
+    # NDT features (ndtqc_* are scanner-dependent reference levels: QC only, never inputs)
+    ndt = [x for x in c if x.startswith("ndt_") and x not in ("ndt_failed", "ndt_error")]
+    ndt_r = [x for x in ndt if x not in NDT_SCANNER_DEPENDENT]
     sets = {
         "paper (300 grid H+S)": paper,
         "paper + entropy": paper + ent,
@@ -64,6 +73,11 @@ def feature_sets(df):
         "v2 disease-specific": dis,
         "v2 band-summary + disease": band + dis,
         "v2 all": tex + dis,
+        "NDT only": ndt,
+        "NDT robust": ndt_r,
+        "v2 band-summary + disease + NDT": band + dis + ndt if ndt else [],
+        "v2 band-summary + disease + NDT robust": band + dis + ndt_r if ndt else [],
+        "v2 all + NDT": tex + dis + ndt if ndt else [],
     }
     return {k: v for k, v in sets.items() if v}
 
