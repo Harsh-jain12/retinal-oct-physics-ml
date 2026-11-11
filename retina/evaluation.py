@@ -64,6 +64,8 @@ def feature_sets(df):
     # NDT features (ndtqc_* are scanner-dependent reference levels: QC only, never inputs)
     ndt = [x for x in c if x.startswith("ndt_") and x not in ("ndt_failed", "ndt_error")]
     ndt_r = [x for x in ndt if x not in NDT_SCANNER_DEPENDENT]
+    # retinal-boundary fractal ("coastline") features, retina/fractal.py
+    frac = [x for x in c if x.startswith("frac_") and x != "frac_error"]
     sets = {
         "paper (300 grid H+S)": paper,
         "paper + entropy": paper + ent,
@@ -78,6 +80,8 @@ def feature_sets(df):
         "v2 band-summary + disease + NDT": band + dis + ndt if ndt else [],
         "v2 band-summary + disease + NDT robust": band + dis + ndt_r if ndt else [],
         "v2 all + NDT": tex + dis + ndt if ndt else [],
+        "fractal boundary only": frac,
+        "v2 band-summary + disease + NDT robust + fractal": band + dis + ndt_r + frac if (ndt and frac) else [],
     }
     return {k: v for k, v in sets.items() if v}
 

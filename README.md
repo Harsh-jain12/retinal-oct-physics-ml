@@ -353,6 +353,94 @@ python mapod_sweep.py    # ~8 min: threshold sweep, matched FCR   -> results/v3/
 ```
 
 
+## Part 4: fractal dimension, validated and applied to retinal "coastlines"
+
+Sources:
+- **Athe, Shakya, Munshi (2013)**, *Characterization of multiphase flow in bubble columns using KT-1 signature and fractal dimension*, Flow Meas. Instrum. 33:122–137. This is where the paper's KT-1 + NMSID Hurst method comes from (same group).
+- **Classic fractals:** the Sierpiński carpet, Brownian (fBm) fractals, and Richardson's coastline measurement (Britain ≈ 1.25; the Koch curve, often quoted as the coastline example, is exactly 1.262).
+
+**Formulas used** (`retina/fractal.py`):
+
+| Quantity | Relation | Used for |
+|---|---|---|
+| Box counting | N(ε) ∝ ε^−D | Sets (Sierpiński carpet) |
+| fBm surface (image as a landscape) | E\|I(p₂) − I(p₁)\| ∝ \|p₂ − p₁\|^H, **D = 3 − H** | The paper's intensity Hurst |
+| fBm profile (a curve) | E\|z(x+d) − z(x)\| ∝ d^H, **D = 2 − H** | Layer boundaries |
+| Divider / ruler (coastline) | L(r) ∝ r^(1−D) | Curves (Koch) |
+
+**D = 3 − H of the image intensity is just a relabelling** of the Hurst exponent the paper already uses, so on its own it adds no information. The new use is the **fractal dimension of the retina's layer boundaries**: the ILM (inner surface) and the RPE are treated as coastlines.
+
+### Step 1: validate the estimators on known answers (`fractal_validation.py` → `results/v4/fractal_validation.png`)
+
+Following the paper's Sec. 6.3:
+
+| Test shape | True | Estimated |
+|---|---|---|
+| Sierpiński carpet, box counting | 1.8928 | **1.8928** |
+| Koch curve, divider (coastline) method | 1.2619 | **1.267** (box counting 1.293) |
+| Plane, 2-D NMSID | H = 1 | 0.965 |
+| Exact fBm profiles, 1-D NMSID, H = 0.1 … 0.9 | H | within ±0.01 |
+| fBm surfaces, 2-D NMSID (256 px) | 0.1 / 0.5 / 0.9 | 0.24 / 0.50 / 0.77 |
+| Paper's estimator, 50×50 grid, k = 1–25 | 0.1 / 0.5 / 0.9 | 0.22 / 0.47 / 0.75 |
+| … after the paper's 1.32× cubic upsampling | 0.1 / 0.5 / 0.9 | 0.26 / 0.51 / 0.76 |
+
+What this shows:
+- **The boundary (1-D) estimator is accurate.**
+- **The 2-D intensity estimator compresses the scale:** low H reads high and high H reads low. Part of this is likely the approximate spectral surface generator.
+- **Upsampling raises H by up to +0.04,** a direct, controlled confirmation of the Part 1 confound (healthy OCTID scans are upsampled more, which inflates their H).
+
+### Step 2: retinal boundaries as coastlines (`extract_fractal.py`, `fractal_eval.py` → `results/v4/`)
+
+**Method:**
+- The ILM is re-located as the strongest dark-to-bright step, and the RPE as the brightest row, within ±4 rows of the v2 trace.
+- This uses sub-pixel fitting and no lateral median filter, which would erase the small-scale roughness being measured.
+- Heights are in µm.
+- **14 `frac_*` features per scan:**
+  - D = 2 − H from 1-D NMSID over lags of 1–16 columns, whole scan and central ±110 columns, with its fit r²;
+  - roughness amplitude (mean step between neighbouring columns);
+  - the divider dimension and its fit r².
+
+**By class** (`fractal_by_class.png`), the patterns are anatomically sensible:
+- **Epiretinal membrane has the most wrinkled ILM:** median D 1.16 vs. 1.10 for healthy eyes on OCTDL.
+- **CNV, DME and drusen also raise ILM D** on Kermany (1.15–1.16 vs. 1.11).
+- **AMD, CNV, RVO and RAO make the RPE much rougher:** amplitude 4–5 µm/column vs. 2.7 µm for healthy eyes.
+- **Healthy RPE has the *highest* D.** A flat, healthy RPE has only noise-like jitter (H small, so D high). Disease adds real, persistent bumps, which raise H and lower D. Read **D** as the *type* of roughness and **amplitude** as its *size*.
+- **They barely depend on the scanner:**
+  - healthy Kermany vs. healthy OCTDL |d| = 0.01–0.58; most RPE features are below 0.4;
+  - compare the strongest NDT features, at about 1.5;
+  - the best single feature, central RPE D, has ε² 0.17 on OCTDL and 0.11 on Kermany, with |d| = 0.24.
+- **The divider dimension stays close to 1.00 for every class.** At ruler sizes that fit the image, these nearly flat, self-affine curves look straight, so the coastline-ruler method is uninformative here; use the variogram D instead.
+
+**Accuracy:**
+
+| Task (balanced accuracy) | Fractal boundary features only (best) | v2 + disease + NDT robust | + fractal |
+|---|---|---|---|
+| OCTID CSR / DR / MH, 500×750 | 0.672 (chance 0.33) | 0.847–0.853 | 0.838–0.868 |
+| OCTDL 7-class | 0.377 (chance 0.14) | 0.641–0.682 | 0.644–0.682 |
+| Kermany 4-class | 0.464 (chance 0.25) | 0.676–0.685 | 0.677–0.680 |
+| Kermany CNV / DME / drusen | 0.531 (chance 0.33) | 0.707–0.730 | 0.708–0.726 |
+
+**Paired test** (`fractal_paired_test.json`, same folds, 3 repeats, patient bootstrap):
+- **12 model × task comparisons; differences all lie between −0.015 and +0.020.**
+- No confidence interval excludes zero.
+- The only consistent gain is OCTID diseases with logistic regression: +0.020 in all 3 repeats, CI [−0.006, +0.044].
+
+**Verdict:**
+- **The boundary fractal dimension is a real, scanner-robust and interpretable signal**:
+  - 14 numbers alone reach 2–3× chance;
+  - the patterns match the anatomy (ERM wrinkles the ILM; AMD and CNV roughen the RPE).
+- **It adds no accuracy on top of v2 + NDT:**
+  - v2's RPE-elevation, thickness and band features already capture the same roughness;
+  - as with D = 3 − H, a fractal relabel of an existing measurement doesn't add information.
+- **Its value is explanatory:** a single, physically meaningful number per boundary that a clinician can read.
+
+```bash
+python fractal_validation.py                                   # ~1 min
+python extract_fractal.py manifests/octid.csv                  # also octdl, kermany (~1 min each)
+python fractal_eval.py                                         # ~8 min
+```
+
+
 ## Known limitations
 
 - **No patient IDs in OCTID.** Each image is its own group, so two scans of the same eye could land in train and test. The Kermany and OCTDL results use real patient IDs.
@@ -361,6 +449,7 @@ python mapod_sweep.py    # ~8 min: threshold sweep, matched FCR   -> results/v3/
 
 - **Kermany subset.** 2,401 of ~84k scans (at most 3 per patient), because of disk space.
 - **No hyperparameter tuning** for either the CNN or v2. Both could improve.
+- **Lateral spacing assumed.** The fractal divider dimension and the MAPOD cyst shapes assume 11.7 um per column (6 mm / 512), which the images do not record.
 - **Synthetic lesions (MAPOD).** These are painted, fully anechoic pockets on the flattened canvas, with an assumed lateral spacing. The POD numbers compare detectors; they are not clinical detection limits.
 
 ## Citation
@@ -368,3 +457,5 @@ python mapod_sweep.py    # ~8 min: threshold sweep, matched FCR   -> results/v3/
 - Kermany D. et al. *Identifying medical diagnoses and treatable diseases by image-based deep learning.* Cell 172(5), 2018. Data: https://data.mendeley.com/datasets/rscbjbr9sj
 - Kulyabin M. et al. *OCTDL: Optical Coherence Tomography Dataset for Image-Based Deep Learning Methods.* Scientific Data 11, 2024 (arXiv:2312.08255). Data: https://zenodo.org/records/10839556
 - Gholami P., Roy P., Parthasarathy M.K., Lakshminarayanan V. *OCTID: Optical Coherence Tomography Image Database*. arXiv:1812.07056.
+- Athe P., Shakya S., Munshi P., Luke A., Mewes D. *Characterization of multiphase flow in bubble columns using KT-1 signature and fractal dimension.* Flow Measurement and Instrumentation 33, 122–137, 2013. doi:10.1016/j.flowmeasinst.2013.05.005
+- Mandelbrot B.B. *The Fractal Geometry of Nature.* W.H. Freeman, 1982.
