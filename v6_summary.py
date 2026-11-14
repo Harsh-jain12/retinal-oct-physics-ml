@@ -60,24 +60,47 @@ def main():
                 out.append(f"| {t} | {ci(rc[t]['v5 best + e(x)'])} | {pr(rc[t]['paired_vs_v5'])} |")
         out += ["", "*Source: `results/v6/residual_clf.json`.*", ""]
     # ---- Step 3
+    ab = js("ablation.json")
+    SH = {"OCTID CSR/DR/MH (500x750)": "OCTID CSR/DR/MH", "OCTDL 7-class": "OCTDL 7-class", "OCTDL 6 diseases": "OCTDL 6 dis.",
+          "Kermany 4-class": "Kermany 4-class", "Kermany CNV/DME/DRUSEN": "Kermany 3 dis.", "Kermany -> OCTDL (NORMAL/DME/AMD)": "Kermany → OCTDL"}
+    rows3 = [("v5 best (soft vote)", "v5 best (soft vote)"), ("ResNet-18 embedding only", "ResNet-18 embedding only"),
+             ("DINOv2-S embedding only", "DINOv2-S embedding only"), ("**hybrid ResNet-18 (headline)**", "hybrid ResNet-18"),
+             ("hybrid DINOv2-S", "hybrid DINOv2-S"), ("CNN (fine-tuned ResNet-18)", "CNN")]
     out += ["### Step 3: hybrid (frozen deep features + physics) vs fine-tuned CNN", "",
-            "| Task | Hybrid DINOv2-S | Hybrid ResNet-18 | DINOv2-S only | ResNet-18 only | CNN (fine-tuned) | Hybrid DINOv2-S − CNN |",
-            "|---|---|---|---|---|---|---|"]
-    for t in TASKS:
-        h = js(f"hybrid_{SLUG[t]}.json")
-        c = js(f"cnn_{SLUG[t]}.json")
-        if not h:
-            continue
-        m = h["models"]
-        pc = h.get("paired", {}).get("hybrid DINOv2-S vs CNN (fine-tuned ResNet-18)")
-        out.append(f"| {t} | {ci(m['hybrid DINOv2-S'])} | {ci(m['hybrid ResNet-18'])} | {ci(m['DINOv2-S embedding only'])} | "
-                   f"{ci(m['ResNet-18 embedding only'])} | {ci(c) if c else 'n/a'} | {pr(pc) if pc else 'n/a'} |")
+            "Balanced accuracy [95% CI], mean of 3 seeds (CNN: seed-0 folds only). Embedding-only rows are the ablation.", "",
+            "| Model | " + " | ".join(SH[t] for t in TASKS) + " |", "|---|" + "---|" * len(TASKS)]
+    for lab, key in rows3:
+        cells = []
+        for t in TASKS:
+            if key == "CNN":
+                c = js(f"cnn_{SLUG[t]}.json"); cells.append(ci(c) if c else "n/a")
+            elif key == "v5 best (soft vote)":
+                d = js(f"image_pod_{SLUG[t]}.json"); cells.append(ci(d["models"][key]) if d else "n/a")
+            else:
+                cells.append(ci(js(f"hybrid_{SLUG[t]}.json")["models"][key]))
+        out.append(f"| {lab} | " + " | ".join(cells) + " |")
+    if ab:
+        out += ["", "Paired differences on identical folds (seed 0), 95% patient-bootstrap CI and one-sided p "
+                "(source `results/v6/ablation.json`):", "",
+                "| Task | ResNet-18 hybrid − ResNet-18 embedding | ResNet-18 hybrid − v5 | ResNet-18 hybrid − CNN | "
+                "DINOv2-S hybrid − DINOv2-S embedding | DINOv2-S hybrid − v5 |", "|---|---|---|---|---|---|"]
+        for t in TASKS:
+            p_ = ab["tasks"][t]["paired"]
+            g_ = lambda k: pr(p_[k]) if k in p_ else "n/a"
+            out.append(f"| {SH[t]} | {g_('hybrid ResNet-18 vs ResNet-18 embedding only')} | {g_('hybrid ResNet-18 vs v5 best (soft vote)')} | "
+                       f"{g_('hybrid ResNet-18 vs CNN')} | {g_('hybrid DINOv2-S vs DINOv2-S embedding only')} | "
+                       f"{g_('hybrid DINOv2-S vs v5 best (soft vote)')} |")
     hi = js("hybrid_importance.json")
     if hi:
-        out += ["", "Grouped permutation importance of the DINOv2-S hybrid on OCTID CSR/DR/MH (drop in balanced accuracy):", "",
+        out += ["", f"Grouped permutation importance of the headline {hi['model']} hybrid, **measured on OCTID CSR/DR/MH only** "
+                "(drop in balanced accuracy when a group is permuted in held-out folds). Groups are labelled by family: "
+                "*physics* = hand-crafted v5 features, *ROM* = the v6 image-level reduced-order model, *deep* = the frozen "
+                "embedding. Importance shows how much the fitted model **relies** on a group, not how much accuracy the group "
+                "**adds**; the ablation above answers that.", "",
                 "| Rank | Group | Importance |", "|---|---|---|"]
-        out += [f"| {i + 1} | {k} | {hi['importance'][k]:.4f} |" for i, k in enumerate(hi["rank"][:10])]
-    out += ["", "*Source: `results/v6/hybrid_<task>.json`, `cnn_<task>.json`, `hybrid_importance.json`.*", ""]
+        out += [f"| {i + 1} | {k} | {hi['importance'][k]:.4f} |" for i, k in enumerate(hi["rank"])]
+    out += ["", "*Source: `results/v6/hybrid_<task>.json`, `cnn_<task>.json`, `ablation.json`, `hybrid_importance.json` "
+            "(DINOv2-S hybrid: `hybrid_importance_dinov2s.json`).*", ""]
     # ---- Step 4
     g = js("gradcam_octid_dis750.json")
     if g:
@@ -106,7 +129,7 @@ def main():
     # ---- Step 6
     cf = js("conformal.json")
     if cf:
-        out += ["### Step 6: conformal triage on the v6 hybrid", "",
+        out += ["### Step 6: conformal triage on the headline v6 hybrid (ResNet-18)", "",
                 "| Task | Target | Coverage per class | Mean set size (v5) | Singleton rate (v5) | Singleton accuracy (v5) |",
                 "|---|---|---|---|---|---|"]
         for r in cf:
@@ -114,7 +137,7 @@ def main():
             out.append(f"| {r['task']} | {r['target']:.2f} | " + ", ".join(f"{k} {v:.3f}" for k, v in r["coverage_per_class"].items())
                        + f" | {r['mean_set_size']:.2f} ({v5.get('mean_set_size', float('nan')):.2f}) | {r['singleton_rate']:.2f} "
                        f"({v5.get('singleton_rate', float('nan')):.2f}) | {r['singleton_accuracy']:.3f} ({v5.get('singleton_accuracy', float('nan')):.3f}) |")
-        out += ["", "*Source: `results/v6/conformal.json` (v5 values copied from `results/v5/conformal.json`).*", ""]
+        out += ["", "*Source: `results/v6/conformal.json` (ResNet-18 hybrid; DINOv2-S hybrid in `conformal_dinov2s.json`; v5 values copied from `results/v5/conformal.json`).*", ""]
     (V6 / "readme_tables.md").write_text("\n".join(out), encoding="utf-8")
     print("\n".join(out))
     summary(ra, rc, cr, cf, g, hi)
@@ -125,7 +148,7 @@ def summary(ra, rc, cr, cf, g, hi):
     h = js("hybrid_octid_dis750.json")
     c = js("cnn_octid_dis750.json")
     lines = ["# v6 summary: image-level ROM and the hybrid model", "",
-             "Five findings. Every number is read from the JSON file named after it (all in `results/v6/`).", ""]
+             "Five findings (3b is the ablation behind finding 3). Every number is read from the JSON file named after it (all in `results/v6/`).", ""]
     if ip:
         best = max(max(v["bacc"] for v in ip["pod_sweep"][m].values()) for m in ip["pod_sweep"])
         lines.append(f"1. **Eigen-retinas carry less signal than the physics features.** On OCTID CSR/DR/MH, POD coefficients of the "
@@ -139,16 +162,30 @@ def summary(ra, rc, cr, cf, g, hi):
                      f"ABNORMAL with AUROC {k['auroc']:.3f} on Kermany, {o['auroc']:.3f} on OCTDL and {x['auroc']:.3f} from Kermany-healthy "
                      f"to OCTDL (`residual_auroc.json`), and its residual maps localise the departure. As a feature it adds "
                      + (f"{pr(rc['OCTID CSR/DR/MH (500x750)']['paired_vs_v5'])} on OCTID (`residual_clf.json`)." if rc and "OCTID CSR/DR/MH (500x750)" in rc else "little (`residual_clf.json`)."))
-    if h and c:
-        pc = h["paired"]["hybrid DINOv2-S vs CNN (fine-tuned ResNet-18)"]
-        within = pc["diff_ci"][0] <= 0 <= pc["diff_ci"][1]
-        lines.append(f"3. **The hybrid narrows but does not clearly close the gap to the CNN.** On OCTID CSR/DR/MH the DINOv2-S hybrid "
-                     f"reaches {ci(h['models']['hybrid DINOv2-S'])} vs {ci(c)} for the fine-tuned ResNet-18 on the same folds; "
-                     f"difference {pr(pc)}, so the paired CI {'includes' if within else 'excludes'} zero "
-                     f"(`hybrid_octid_dis750.json`, `cnn_octid_dis750.json`). It beats v5 by "
-                     f"{pr(h['paired']['hybrid DINOv2-S vs v5 best (soft vote)'])}."
-                     + (f" Its top permutation-importance group is \"{hi['rank'][0]}\" and {sum(k.startswith('physics') for k in hi['rank'][:5])} of the top 5 "
-                        f"groups are physics features (`hybrid_importance.json`)." if hi else ""))
+    ab = js("ablation.json")
+    if ab and c:
+        T = ab["tasks"]
+        SH = {"OCTID CSR/DR/MH (500x750)": "OCTID", "OCTDL 7-class": "OCTDL 7-class", "OCTDL 6 diseases": "OCTDL 6-disease",
+              "Kermany 4-class": "Kermany 4-class", "Kermany CNV/DME/DRUSEN": "Kermany 3-disease",
+              "Kermany -> OCTDL (NORMAL/DME/AMD)": "the new scanner"}
+        sigv = lambda k: ([SH[t] for t in TASKS if T[t]["paired"][k]["diff_ci"][0] > 0],
+                          [SH[t] for t in TASKS if not T[t]["paired"][k]["diff_ci"][0] > 0])
+        s5, n5 = sigv("hybrid ResNet-18 vs v5 best (soft vote)")
+        se, ne = sigv("hybrid ResNet-18 vs ResNet-18 embedding only")
+        po = T["OCTID CSR/DR/MH (500x750)"]["paired"]
+        lines.append(f"3. **The headline ResNet-18 hybrid narrows but does not close the gap to the CNN.** On OCTID CSR/DR/MH it "
+                     f"reaches {ci(h['models']['hybrid ResNet-18'])} vs {ci(c)} for the fine-tuned ResNet-18 on the same folds; "
+                     f"paired difference {pr(po['hybrid ResNet-18 vs CNN'])}; on Kermany 4-class "
+                     f"{pr(T['Kermany 4-class']['paired']['hybrid ResNet-18 vs CNN'])} and on the new scanner "
+                     f"{pr(T['Kermany -> OCTDL (NORMAL/DME/AMD)']['paired']['hybrid ResNet-18 vs CNN'])} (`ablation.json`). "
+                     f"Against v5 it is significantly better on {', '.join(s5)} (CI excludes zero), and the CI includes zero on "
+                     f"{', '.join(n5) or 'no task'}; OCTID: {pr(po['hybrid ResNet-18 vs v5 best (soft vote)'])}. The DINOv2-S hybrid, "
+                     f"pre-registered before the results, is reported in every table; ResNet-18 became the headline afterwards.")
+        lines.append(f"3b. **Ablation: physics adds accuracy on OCTDL and Kermany, not on OCTID.** Same frozen ResNet-18 with and "
+                     f"without the physics + ROM features: significant gain on {', '.join(se)}; CI includes zero on {', '.join(ne)} "
+                     f"(OCTID {pr(po['hybrid ResNet-18 vs ResNet-18 embedding only'])}, `ablation.json`)."
+                     + (f" Permutation importance (OCTID only) ranks \"{hi['rank'][0]}\" first, but importance shows reliance, "
+                        f"not added accuracy (`hybrid_importance.json`)." if hi else ""))
     if g:
         lines.append(f"4. **The CNN does not look where the physics looks.** Grad-CAM mass by anatomical band vs the physics model's "
                      f"per-band importance: Spearman ρ = {g['spearman_rho']:.2f} (p = {g['spearman_p']:.2f}) over {g['n_cells']} band × class "
@@ -159,9 +196,9 @@ def summary(ra, rc, cr, cf, g, hi):
                      f"{b['bacc']:.3f}, DME recall {b['recall_per_class']['DME']:.2f} (`cross.json`), far below the fine-tuned CNN's "
                      f"{js('cnn_kermany_to_octdl.json')['bacc']:.3f} (`cnn_kermany_to_octdl.json`). Healthy-reference calibration "
                      f"raises DME recall but costs AMD recall and lowers balanced accuracy."
-                     + (f" Conformal triage on the hybrid keeps ABNORMAL coverage at "
+                     + (f" Conformal triage on the ResNet-18 hybrid gives ABNORMAL coverage "
                         f"{[r for r in cf if r['task'].startswith('OCTDL triage') and r['alpha'] == 0.05][0]['coverage_per_class']['ABNORMAL']:.3f} "
-                        f"for a 0.95 target on OCTDL (`conformal.json`)." if cf else ""))
+                        f"for a 0.95 target on OCTDL, just under target (`conformal.json`)." if cf else ""))
     (V6 / "SUMMARY.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
 

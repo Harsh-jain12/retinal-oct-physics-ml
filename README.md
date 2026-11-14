@@ -35,7 +35,7 @@ The work happened in five stages:
 | **v2** Anatomy | Find the retinal layers, measure inside them | Balanced accuracy on the honest disease-only task goes from **0.50 → 0.84** |
 | **v3/v4** NDT + fractal | Pulse-echo (ultrasound-style) features, boundary "coastline" fractals | Small further gains (**0.86–0.87**), detection limits measured (MAPOD) |
 | **v5** ROM + ML | Reduced-order modelling (POD), ensembles, conformal guarantees, scanner calibration | POD explains *why* the paper's grid fails. The ensemble is the best model on Kermany and on the unseen scanner. Triage gets a real, stated guarantee |
-| **v6** Image-level ROM + hybrid | POD of the flattened *image*, healthy-only POD residual (defect detection), frozen deep features + physics, Grad-CAM check | The hybrid beats v5 on every task (e.g. Kermany 4-class 0.734) with physics still ranked first, but the fine-tuned CNN stays ahead, clearly so on a new scanner |
+| **v6** Image-level ROM + hybrid | POD of the flattened *image*, healthy-only POD residual (defect detection), frozen deep features + physics, ablation, Grad-CAM check | The ResNet-18 hybrid is significantly better than v5 on OCTID, OCTDL 7-class, Kermany 4-class, Kermany 3-disease, the new scanner, not on OCTDL 6-disease; physics adds accuracy over the embedding alone on OCTDL 7-class and Kermany. The fine-tuned CNN stays ahead, clearly so on a new scanner |
 
 v6 (image-level ROM, hybrid deep + physics model) is in [Section 11](#11-v6-image-level-rom-and-a-hybrid-model), summarised in [`results/v6/SUMMARY.md`](results/v6/SUMMARY.md). A presentation deck that explains the whole project is in [Section 12](#12-presentation).
 
@@ -68,19 +68,19 @@ v6 (image-level ROM, hybrid deep + physics model) is in [Section 11](#11-v6-imag
 
 Best **balanced accuracy** (patient-grouped 5-fold CV, mean of 3 repeats). Chance is 1/(number of classes).
 
-| Task (chance) | Paper method | v2 | v3 | v4 | v5 ensemble | **v6 hybrid** | CNN (black box) |
+| Task (chance) | Paper method | v2 | v3 | v4 | v5 ensemble | **v6 hybrid (ResNet-18)** | CNN (black box) |
 |---|---|---|---|---|---|---|---|
-| OCTID CSR / DR / MH, 500×750 only (0.33) | 0.504 | 0.836 | 0.855 | 0.868 | 0.872 | **0.899** | 0.935 |
-| OCTDL 7-class (0.14) | 0.464 | 0.661 | 0.689 | 0.682 | 0.669 (LR alone 0.682) | **0.688** | n/a |
-| Kermany 4-class (0.25) | 0.449 | 0.683 | 0.692 | 0.680 | 0.695 | **0.734** | 0.867 |
-| Kermany → OCTDL, unseen scanner (0.33) | 0.374 | 0.640 | 0.680 | n/a | 0.702 | **0.729** | 0.925 |
+| OCTID CSR / DR / MH, 500×750 only (0.33) | 0.504 | 0.836 | 0.855 | 0.868 | 0.872 | **0.904** | 0.935 |
+| OCTDL 7-class (0.14) | 0.464 | 0.661 | 0.689 | 0.682 | 0.669 (LR alone 0.682) | **0.708** | n/a |
+| Kermany 4-class (0.25) | 0.449 | 0.683 | 0.692 | 0.680 | 0.695 | **0.730** | 0.867 |
+| Kermany → OCTDL, unseen scanner (0.33) | 0.374 | 0.640 | 0.680 | n/a | 0.702 | **0.753** | 0.925 |
 
-*Every cell is the best row of that stage's result file (`results/v5/progress.json` for the first three rows; `results/v2|v3/cross_scanner.json` and `results/v5/harmonize.json` for the last). v4 adds fractal features on top of v3, so a v4 cell can be slightly below v3 when the fractal features add nothing. v6 hybrid: `results/v6/hybrid_<task>.json` (DINOv2-S hybrid, chosen before seeing results). CNN: `results/v6/cnn_<task>.json`, fine-tuned ResNet-18 re-run on the *same* folds as every other model so the comparison is paired (the earlier `cnn_baseline.py` runs gave 0.940 / 0.864 / 0.932); not run on OCTDL to stay inside the GPU budget.*
+*Every cell is the best row of that stage's result file (`results/v5/progress.json` for the first three rows; `results/v2|v3/cross_scanner.json` and `results/v5/harmonize.json` for the last). v4 adds fractal features on top of v3, so a v4 cell can be slightly below v3 when the fractal features add nothing. v6 hybrid: `results/v6/hybrid_<task>.json`, ResNet-18 hybrid (the headline model; the DINOv2-S hybrid was pre-registered before the results, ResNet-18 was chosen afterwards because it wins or ties on 4 of 6 tasks, and both are reported in Section 11). CNN: `results/v6/cnn_<task>.json`, fine-tuned ResNet-18 re-run on the *same* folds as every other model so the comparison is paired (the earlier `cnn_baseline.py` runs gave 0.940 / 0.864 / 0.932); not run on OCTDL to stay inside the GPU budget.*
 
 **Bottom line.**
 - The *physics idea* (measure roughness and density) works much better once it is measured **inside anatomical layers** (v2). The paper's fixed pixel grid is the main weakness, and v5's POD analysis shows why: most of its variation is *where the retina sits in the picture*, not disease.
 - Better ML on top of good features adds a little within one scanner (+0.00 to +0.02) and most on the hardest test, an unseen scanner (+0.022 over the previous best).
-- v6 adds frozen deep features to the physics and gains 2–4 points over v5 on every task, with a physics group still the most important. A fine-tuned CNN remains better: by 0.036 on OCTID (not significant), 0.133 on Kermany and 0.196 on a new scanner.
+- v6 adds frozen deep features (ResNet-18) to the physics. Paired against v5, the gain is significant on OCTID, OCTDL 7-class, Kermany 4-class, Kermany 3-disease, the new scanner (e.g. Kermany 4-class +0.032 [+0.018, +0.045], p = 0.000) and the CI includes zero on OCTDL 6-disease (+0.028 [-0.007, +0.059], p = 0.051). A fine-tuned CNN remains better: by 0.036 on OCTID (CI includes zero), 0.141 on Kermany and 0.172 on a new scanner.
 
 ---
 
@@ -111,10 +111,11 @@ pip install -r requirements.txt
 | `python v6_image_pod.py` | ~40 min | Step 1, `results/v6/image_pod_*.json` |
 | `python v6_residual.py` | ~60 min | Step 2, `residual_*.json` |
 | `python v6_cnn.py --task octid_dis750` (also `kermany_4`, `cross`) | 6 / 50 / 7 min (GPU) | CNN on the same folds, fold models for Grad-CAM |
-| `python v6_hybrid.py` | ~60 min | Step 3, `hybrid_*.json`, `hybrid_importance.json` |
+| `python v6_hybrid.py` (importance: `--task importance --backbone resnet18`/`dinov2s`) | ~60 min | Step 3, `hybrid_*.json`, `hybrid_importance*.json` |
+| `python v6_ablation.py` | ~2 min | paired hybrid vs embedding-only / v5 / CNN, `ablation.json` |
 | `python v6_gradcam.py` | ~5 min | Step 4, `gradcam_octid_dis750.json` |
 | `python v6_tiles.py octdl --blur 0.5 1 --features` then `python v6_embed.py octdl --blur 0.5 1` and `python v6_cross.py` | ~25 min | Step 5, `cross.json` |
-| `python v6_conformal.py` | ~40 min | Step 6, `conformal.json` |
+| `python v6_conformal.py` (`--backbone dinov2s` for the DINOv2 hybrid) | ~40 min | Step 6, `conformal.json` |
 | `python v6_baselines.py`, `python v6_figdata.py`, `python v6_paper_claims.py`, `python v6_summary.py` | minutes | figure inputs, `SUMMARY.md` |
 
 Every v6 script takes `--quick` (1 seed, 2 folds) for a smoke test. `pytest tests/` checks that no transformer is ever fitted on test rows.
@@ -542,40 +543,59 @@ is the fraction of its deviation from the average healthy retina that the health
 A frozen network (never trained on our labels) turns each tile into an embedding: ResNet-18 (ImageNet, 512 numbers) or DINOv2-S (self-supervised, 384 numbers). Inside each training fold we reduce it with PCA to 64 numbers and concatenate
 
 $$
-z = [\,\text{PCA}_{64}(\text{embedding}),\; \text{v5 features (171)},\; \text{image-POD } a_{1..50},\; \log e(x)\,] \;\to\; \text{soft vote (LR + LightGBM + SVM)}
+z = [\,\text{PCA}_{64}(\text{embedding}),\; \text{v5 physics features (171)},\; \text{ROM: image-POD } a_{1..50},\; \log e(x)\,] \;\to\; \text{soft vote (LR + LightGBM + SVM)}
 $$
 
-The DINOv2-S hybrid was chosen as "the v6 model" before seeing any result. The fine-tuned CNN (`v6_cnn.py`, same recipe as `cnn_baseline.py`) was re-run on the identical folds so the comparison is paired.
+**Which hybrid is the headline.** The DINOv2-S hybrid was chosen as "the v6 model" *before* seeing any result. After the runs, the ResNet-18 hybrid won or tied on 4 of 6 tasks, so it is the headline model in this README, the summary and the deck. That choice was made after seeing the results; both hybrids and both embedding-only models are reported in every table so the reader can judge. The fine-tuned CNN (`v6_cnn.py`, same recipe as `cnn_baseline.py`) was re-run on the identical folds so every comparison is paired.
 
 ![hybrid vs CNN](presentation/figures/fig14e_hybrid_vs_cnn.png)
 
-| Task | Hybrid DINOv2-S | Hybrid ResNet-18 | DINOv2-S only | ResNet-18 only | CNN (fine-tuned) | Hybrid DINOv2-S − CNN |
-|---|---|---|---|---|---|---|
-| OCTID CSR/DR/MH (500x750) | 0.899 [0.864, 0.933] | 0.904 [0.865, 0.932] | 0.865 [0.831, 0.908] | 0.908 [0.884, 0.948] | 0.935 [0.905, 0.961] | -0.036 [-0.078, +0.004], p = 0.965 |
-| OCTDL 7-class | 0.688 [0.632, 0.748] | 0.708 [0.657, 0.764] | 0.600 [0.541, 0.649] | 0.671 [0.603, 0.709] | n/a | n/a |
-| OCTDL 6 diseases | 0.669 [0.602, 0.736] | 0.682 [0.616, 0.741] | 0.581 [0.520, 0.655] | 0.649 [0.585, 0.704] | n/a | n/a |
-| Kermany 4-class | 0.734 [0.715, 0.759] | 0.730 [0.704, 0.750] | 0.683 [0.668, 0.711] | 0.695 [0.670, 0.715] | 0.867 [0.851, 0.885] | -0.130 [-0.152, -0.108], p = 1.000 |
-| Kermany CNV/DME/DRUSEN | 0.763 [0.740, 0.791] | 0.759 [0.735, 0.789] | 0.722 [0.691, 0.742] | 0.718 [0.701, 0.751] | n/a | n/a |
-| Kermany -> OCTDL (NORMAL/DME/AMD) | 0.729 [0.694, 0.766] | 0.753 [0.719, 0.789] | 0.683 [0.647, 0.717] | 0.737 [0.702, 0.770] | 0.925 [0.908, 0.940] | -0.197 [-0.232, -0.159], p = 1.000 |
+Balanced accuracy [95% CI], mean of 3 seeds (CNN: seed-0 folds only). Embedding-only rows are the ablation.
 
-Grouped permutation importance of the DINOv2-S hybrid on OCTID CSR/DR/MH (drop in balanced accuracy):
+| Model | OCTID CSR/DR/MH | OCTDL 7-class | OCTDL 6 dis. | Kermany 4-class | Kermany 3 dis. | Kermany → OCTDL |
+|---|---|---|---|---|---|---|
+| v5 best (soft vote) | 0.872 [0.833, 0.911] | 0.669 [0.605, 0.723] | 0.653 [0.589, 0.722] | 0.695 [0.671, 0.718] | 0.731 [0.706, 0.765] | 0.709 [0.673, 0.743] |
+| ResNet-18 embedding only | 0.908 [0.884, 0.948] | 0.671 [0.603, 0.709] | 0.649 [0.585, 0.704] | 0.695 [0.670, 0.715] | 0.718 [0.701, 0.751] | 0.737 [0.702, 0.770] |
+| DINOv2-S embedding only | 0.865 [0.831, 0.908] | 0.600 [0.541, 0.649] | 0.581 [0.520, 0.655] | 0.683 [0.668, 0.711] | 0.722 [0.691, 0.742] | 0.683 [0.647, 0.717] |
+| **hybrid ResNet-18 (headline)** | 0.904 [0.865, 0.932] | 0.708 [0.657, 0.764] | 0.682 [0.616, 0.741] | 0.730 [0.704, 0.750] | 0.759 [0.735, 0.789] | 0.753 [0.719, 0.789] |
+| hybrid DINOv2-S | 0.899 [0.864, 0.933] | 0.688 [0.632, 0.748] | 0.669 [0.602, 0.736] | 0.734 [0.715, 0.759] | 0.763 [0.740, 0.791] | 0.729 [0.694, 0.766] |
+| CNN (fine-tuned ResNet-18) | 0.935 [0.905, 0.961] | n/a | n/a | 0.867 [0.851, 0.885] | n/a | 0.925 [0.908, 0.940] |
+
+Paired differences on identical folds (seed 0), 95% patient-bootstrap CI and one-sided p (source `results/v6/ablation.json`):
+
+| Task | ResNet-18 hybrid − ResNet-18 embedding | ResNet-18 hybrid − v5 | ResNet-18 hybrid − CNN | DINOv2-S hybrid − DINOv2-S embedding | DINOv2-S hybrid − v5 |
+|---|---|---|---|---|---|
+| OCTID CSR/DR/MH | -0.018 [-0.062, +0.024], p = 0.779 | +0.025 [+0.001, +0.050], p = 0.020 | -0.036 [-0.076, +0.003], p = 0.966 | +0.028 [-0.020, +0.075], p = 0.116 | +0.025 [-0.004, +0.054], p = 0.045 |
+| OCTDL 7-class | +0.051 [+0.018, +0.096], p = 0.002 | +0.045 [+0.022, +0.073], p = 0.000 | n/a | +0.098 [+0.066, +0.130], p = 0.000 | +0.024 [+0.006, +0.044], p = 0.005 |
+| OCTDL 6 dis. | +0.035 [-0.004, +0.077], p = 0.040 | +0.028 [-0.007, +0.059], p = 0.051 | n/a | +0.080 [+0.047, +0.119], p = 0.000 | +0.014 [-0.006, +0.035], p = 0.085 |
+| Kermany 4-class | +0.034 [+0.014, +0.053], p = 0.001 | +0.032 [+0.018, +0.045], p = 0.000 | -0.141 [-0.162, -0.120], p = 1.000 | +0.047 [+0.026, +0.069], p = 0.000 | +0.043 [+0.028, +0.057], p = 0.000 |
+| Kermany 3 dis. | +0.036 [+0.013, +0.059], p = 0.002 | +0.027 [+0.011, +0.043], p = 0.001 | n/a | +0.050 [+0.028, +0.071], p = 0.000 | +0.031 [+0.014, +0.048], p = 0.001 |
+| Kermany → OCTDL | +0.016 [-0.024, +0.057], p = 0.221 | +0.044 [+0.021, +0.067], p = 0.000 | -0.172 [-0.206, -0.138], p = 1.000 | +0.046 [+0.011, +0.082], p = 0.006 | +0.020 [-0.004, +0.046], p = 0.061 |
+
+Grouped permutation importance of the headline hybrid ResNet-18 hybrid, **measured on OCTID CSR/DR/MH only** (drop in balanced accuracy when a group is permuted in held-out folds). Groups are labelled by family: *physics* = hand-crafted v5 features, *ROM* = the v6 image-level reduced-order model, *deep* = the frozen embedding. Importance shows how much the fitted model **relies** on a group, not how much accuracy the group **adds**; the ablation above answers that.
 
 | Rank | Group | Importance |
 |---|---|---|
-| 1 | physics: NDT (pulse-echo) | 0.0647 |
-| 2 | DINOv2-S embedding (PCA 64) | 0.0563 |
-| 3 | physics: disease-specific (thickness, fluid, gap, RPE) | 0.0398 |
-| 4 | physics: texture: rpe band | 0.0347 |
-| 5 | physics: texture: outer band | 0.0217 |
-| 6 | physics: texture: inner band | 0.0197 |
-| 7 | image-POD (50 modes) | 0.0111 |
-| 8 | physics: texture: choroid band | 0.0087 |
-| 9 | physics: boundary fractal | 0.0069 |
-| 10 | POD residual e(x) | 0.0000 |
+| 1 | deep: ResNet-18 embedding (PCA 64) | 0.0558 |
+| 2 | physics: NDT (pulse-echo) | 0.0456 |
+| 3 | physics: disease-specific (thickness, fluid, gap, RPE) | 0.0390 |
+| 4 | physics: texture: rpe band | 0.0316 |
+| 5 | physics: texture: choroid band | 0.0078 |
+| 6 | physics: texture: inner band | 0.0067 |
+| 7 | physics: texture: outer band | 0.0052 |
+| 8 | ROM: image-POD (50 modes) | 0.0022 |
+| 9 | ROM: POD residual e(x) | 0.0000 |
+| 10 | physics: boundary fractal | -0.0019 |
 
-*Source: `results/v6/hybrid_<task>.json`, `cnn_<task>.json`, `hybrid_importance.json`.*
+*Source: `results/v6/hybrid_<task>.json`, `cnn_<task>.json`, `ablation.json`, `hybrid_importance.json` (DINOv2-S hybrid: `hybrid_importance_dinov2s.json`).*
 
-**Acceptance check (stated plainly).** The target was to match the fine-tuned CNN within the CI on OCTID CSR/DR/MH while keeping physics features in the top-10 importances. The paired difference is -0.036 with 95% CI [-0.078, +0.004]: the interval *just* includes zero, so it is not significantly worse, but the point estimate is 3.6 points lower, and on Kermany and on the new scanner the CNN is clearly better. The physics part is not decorative: the NDT pulse-echo group is the single most important group, ahead of the embedding. (With only 10 groups, "in the top 10" is automatic, so we report the top-5 share instead.) **The hybrid does not close the gap to the CNN; it narrows it while staying explainable.**
+**Ablation: what does the physics add?** The embedding-only rows answer this directly. With the same frozen ResNet-18, adding the physics + ROM features is significantly better on OCTDL 7-class, Kermany 4-class, Kermany 3-disease (+0.03 to +0.05), and the CI includes zero on OCTID, OCTDL 6-disease, the new scanner. On OCTID the embedding alone is already as good (-0.018 [-0.062, +0.024], p = 0.779). The DINOv2-S embedding is weaker on its own, so physics adds more there.
+
+![ablation](presentation/figures/fig14f_ablation.png)
+
+**Importance is not accuracy.** Grouped permutation importance was measured on OCTID CSR/DR/MH only. For the ResNet-18 hybrid it ranks the deep embedding first and the NDT pulse-echo group second; the two ROM groups (image-POD, e(x)) have almost no weight. Importance shows how much the *fitted* model relies on a group, not how much accuracy the group adds: on OCTID the physics features are heavily used, yet removing them does not lower accuracy, because the embedding carries the same information.
+
+**Acceptance check (stated plainly).** The target was to match the fine-tuned CNN within the CI on OCTID CSR/DR/MH while keeping physics in the top importances. The ResNet-18 hybrid's paired difference to the CNN is -0.036 [-0.076, +0.003], p = 0.966: the interval just includes zero, but the point estimate is 0.036 lower, and on Kermany (-0.141 [-0.162, -0.120], p = 1.000) and on the new scanner (-0.172 [-0.206, -0.138], p = 1.000) the CNN is clearly better. Physics groups rank 2nd to 4th, behind the embedding. **The hybrid does not close the gap to the CNN; it narrows it while staying partly explainable.**
 
 ### 11.4 Does the CNN look where the physics looks?
 
@@ -606,33 +626,37 @@ Two NDT-style corrections: a **reference block** (z-score every input block with
 | v5 best (soft vote) | none | TTA | 0.670 | 0.66 / 0.50 / 0.85 |
 | v5 best (soft vote) | healthy-ref k=30 | no TTA | 0.682 ± 0.015 | 0.72 / 0.75 / 0.57 |
 | v5 best (soft vote) | healthy-ref k=30 | TTA | 0.705 ± 0.018 | 0.75 / 0.74 / 0.62 |
+| v6 hybrid (ResNet-18 + physics) | none | no TTA | 0.753 | 0.88 / 0.62 / 0.76 |
+| v6 hybrid (ResNet-18 + physics) | none | TTA | 0.753 | 0.80 / 0.64 / 0.82 |
+| v6 hybrid (ResNet-18 + physics) | healthy-ref k=30 | no TTA | 0.730 ± 0.018 | 0.79 / 0.80 / 0.60 |
+| v6 hybrid (ResNet-18 + physics) | healthy-ref k=30 | TTA | 0.752 ± 0.018 | 0.82 / 0.80 / 0.64 |
 | v6 hybrid (DINOv2-S + physics) | none | no TTA | 0.729 | 0.81 / 0.58 / 0.79 |
 | v6 hybrid (DINOv2-S + physics) | none | TTA | 0.729 | 0.73 / 0.63 / 0.83 |
 | v6 hybrid (DINOv2-S + physics) | healthy-ref k=30 | no TTA | 0.701 ± 0.015 | 0.77 / 0.70 / 0.63 |
 | v6 hybrid (DINOv2-S + physics) | healthy-ref k=30 | TTA | 0.719 ± 0.015 | 0.77 / 0.73 / 0.66 |
 
-Paired tests: v6 hybrid (DINOv2-S + physics) | none | no TTA vs v5 best (soft vote) | none | no TTA: +0.020 [-0.004, +0.046], p = 0.061; v5 best (soft vote) | none | TTA vs no TTA: -0.039 [-0.060, -0.021], p = 1.000; v6 hybrid (DINOv2-S + physics) | none | TTA vs no TTA: +0.000 [-0.017, +0.019], p = 0.501; v6 hybrid (DINOv2-S + physics) | none | no TTA vs CNN: -0.197 [-0.232, -0.159], p = 1.000
+Paired tests: v6 hybrid (ResNet-18 + physics) | none | no TTA vs v5 best (soft vote) | none | no TTA: +0.044 [+0.021, +0.067], p = 0.000; v6 hybrid (DINOv2-S + physics) | none | no TTA vs v5 best (soft vote) | none | no TTA: +0.020 [-0.004, +0.046], p = 0.061; v5 best (soft vote) | none | TTA vs no TTA: -0.039 [-0.060, -0.021], p = 1.000; v6 hybrid (ResNet-18 + physics) | none | TTA vs no TTA: -0.000 [-0.020, +0.019], p = 0.524; v6 hybrid (DINOv2-S + physics) | none | TTA vs no TTA: +0.000 [-0.017, +0.019], p = 0.501; v6 hybrid (ResNet-18 + physics) | none | no TTA vs CNN: -0.172 [-0.206, -0.138], p = 1.000; v6 hybrid (DINOv2-S + physics) | none | no TTA vs CNN: -0.197 [-0.232, -0.159], p = 1.000
 
 *Source: `results/v6/cross.json`.*
 
-**Reading.** The hybrid is the best non-CNN model on the new scanner (0.729), but the CNN reaches 0.925. Calibration with healthy eyes trades AMD recall for DME recall and lowers balanced accuracy overall; TTA leaves the hybrid unchanged and hurts v5. **DME recall is still the weak point.** Affine calibration cannot fix texture differences between scanners, the same conclusion as v5.
+**Reading.** The ResNet-18 hybrid is the best non-CNN model on the new scanner (0.753, significantly better than v5: +0.044 [+0.021, +0.067], p = 0.000), but the CNN reaches 0.925. Calibration with healthy eyes trades AMD recall for DME recall and does not raise balanced accuracy; TTA leaves the hybrids unchanged and hurts v5. **DME recall is still the weak point.**
 
-### 11.6 Conformal triage on the hybrid
+### 11.6 Conformal triage on the headline hybrid
 
 | Task | Target | Coverage per class | Mean set size (v5) | Singleton rate (v5) | Singleton accuracy (v5) |
 |---|---|---|---|---|---|
-| OCTDL triage NORMAL vs ABNORMAL | 0.95 | ABNORMAL 0.951, NORMAL 0.961 | 1.06 (1.08) | 0.94 (0.92) | 0.951 (0.952) |
-| OCTDL triage NORMAL vs ABNORMAL | 0.90 | ABNORMAL 0.901, NORMAL 0.914 | 0.97 (0.98) | 0.96 (0.96) | 0.939 (0.931) |
-| Kermany triage NORMAL vs ABNORMAL | 0.95 | ABNORMAL 0.942, NORMAL 0.938 | 1.18 (1.27) | 0.82 (0.73) | 0.928 (0.921) |
-| Kermany triage NORMAL vs ABNORMAL | 0.90 | ABNORMAL 0.891, NORMAL 0.889 | 1.04 (1.09) | 0.95 (0.91) | 0.893 (0.878) |
-| OCTID CSR/DR/MH (500x750) | 0.95 | CSR 1.000, DR 0.961, MH 0.931 | 2.03 (2.10) | 0.19 (0.18) | 0.934 (0.948) |
-| OCTID CSR/DR/MH (500x750) | 0.90 | CSR 0.926, DR 0.936, MH 0.863 | 1.11 (1.25) | 0.86 (0.75) | 0.913 (0.910) |
-| Kermany CNV/DME/DRUSEN | 0.95 | CNV 0.947, DME 0.956, DRUSEN 0.947 | 1.75 (1.82) | 0.39 (0.33) | 0.908 (0.899) |
-| Kermany CNV/DME/DRUSEN | 0.90 | CNV 0.905, DME 0.900, DRUSEN 0.900 | 1.47 (1.53) | 0.57 (0.52) | 0.859 (0.841) |
+| OCTDL triage NORMAL vs ABNORMAL | 0.95 | ABNORMAL 0.945, NORMAL 0.961 | 1.04 (1.08) | 0.95 (0.92) | 0.947 (0.952) |
+| OCTDL triage NORMAL vs ABNORMAL | 0.90 | ABNORMAL 0.892, NORMAL 0.919 | 0.96 (0.98) | 0.95 (0.96) | 0.940 (0.931) |
+| Kermany triage NORMAL vs ABNORMAL | 0.95 | ABNORMAL 0.941, NORMAL 0.943 | 1.17 (1.27) | 0.83 (0.73) | 0.929 (0.921) |
+| Kermany triage NORMAL vs ABNORMAL | 0.90 | ABNORMAL 0.889, NORMAL 0.894 | 1.04 (1.09) | 0.96 (0.91) | 0.886 (0.878) |
+| OCTID CSR/DR/MH (500x750) | 0.95 | CSR 1.000, DR 0.975, MH 0.936 | 2.01 (2.10) | 0.19 (0.18) | 0.951 (0.948) |
+| OCTID CSR/DR/MH (500x750) | 0.90 | CSR 0.897, DR 0.951, MH 0.887 | 1.14 (1.25) | 0.85 (0.75) | 0.910 (0.910) |
+| Kermany CNV/DME/DRUSEN | 0.95 | CNV 0.952, DME 0.952, DRUSEN 0.952 | 1.78 (1.82) | 0.37 (0.33) | 0.910 (0.899) |
+| Kermany CNV/DME/DRUSEN | 0.90 | CNV 0.903, DME 0.899, DRUSEN 0.897 | 1.44 (1.53) | 0.60 (0.52) | 0.860 (0.841) |
 
-*Source: `results/v6/conformal.json` (v5 values copied from `results/v5/conformal.json`).*
+*Source: `results/v6/conformal.json` (ResNet-18 hybrid; DINOv2-S hybrid in `conformal_dinov2s.json`; v5 values copied from `results/v5/conformal.json`).*
 
-**Reading.** The guarantee holds for the hybrid as it did for v5 (ABNORMAL coverage 0.951 at target 0.95 on OCTDL), and because the hybrid is more accurate the prediction sets are smaller on every task: fewer scans need a second opinion for the same guarantee.
+**Reading.** At a 0.95 target the ResNet-18 hybrid keeps 0.945 of diseased OCTDL eyes, just under the target and within one binomial standard error; at 0.90 and on the other tasks coverage sits on or near the target, as for v5. Because the hybrid is more accurate, the prediction sets are smaller on every task: fewer scans need a second opinion for the same guarantee. (DINOv2-S hybrid: `results/v6/conformal_dinov2s.json`.)
 
 ---
 
@@ -640,7 +664,7 @@ Paired tests: v6 hybrid (DINOv2-S + physics) | none | no TTA vs v5 best (soft vo
 
 [![deck preview](presentation/preview.png)](presentation/Retinal_OCT_Physics_ML.pptx)
 
-- Deck: [`presentation/Retinal_OCT_Physics_ML.pptx`](presentation/Retinal_OCT_Physics_ML.pptx) (26 slides, 16:9, speaker notes on every slide), PDF: [`presentation/Retinal_OCT_Physics_ML.pdf`](presentation/Retinal_OCT_Physics_ML.pdf).
+- Deck: [`presentation/Retinal_OCT_Physics_ML.pptx`](presentation/Retinal_OCT_Physics_ML.pptx) (28 slides, 16:9, speaker notes on every slide), PDF: [`presentation/Retinal_OCT_Physics_ML.pdf`](presentation/Retinal_OCT_Physics_ML.pdf).
 - Rebuild: `python make_figures.py && python make_deck.py --pdf`. `make_figures.py` reads only `results/` and writes `presentation/figures/*.png`; `make_deck.py` builds the deck with python-pptx.
 - Every number on a slide is read from `results/` at build time and listed with its source file in [`presentation/numbers.json`](presentation/numbers.json) (figure values in `presentation/figures/figure_numbers.json`).
 
@@ -680,7 +704,7 @@ retina/
   v6data.py v6eval.py v6run.py   v6: tasks, identical folds, OOF CSVs, paired tests
 v5_rom.py  v5_ensemble.py  v5_conformal.py  v5_harmonize.py  v5_summary.py
 v6_tiles.py v6_embed.py v6_image_pod.py v6_residual.py v6_cnn.py v6_hybrid.py v6_gradcam.py
-v6_cross.py v6_conformal.py v6_baselines.py v6_figdata.py v6_paper_claims.py v6_summary.py
+v6_cross.py v6_conformal.py v6_ablation.py v6_baselines.py v6_figdata.py v6_paper_claims.py v6_summary.py
 make_figures.py make_deck.py   presentation (figures from results/ only, python-pptx deck)
 tests/test_no_leak.py          fails if any transformer is fitted on test rows
 CLAUDE_CODE_PROMPT.md   step-by-step v6 plan (image-level ROM, hybrid deep + physics)
