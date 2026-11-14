@@ -1,0 +1,38 @@
+{
+  "task": "OCTID CSR/DR/MH (500x750)",
+  "importance": {
+    "physics: NDT (pulse-echo)": 0.06465689865689861,
+    "DINOv2-S embedding (PCA 64)": 0.05628815628815625,
+    "physics: disease-specific (thickness, fluid, gap, RPE)": 0.03980463980463975,
+    "physics: texture: rpe band": 0.03474969474969471,
+    "physics: texture: outer band": 0.021689865689865643,
+    "physics: texture: inner band": 0.019736263736263714,
+    "image-POD (50 modes)": 0.011098901098901081,
+    "physics: texture: choroid band": 0.008737484737484693,
+    "physics: boundary fractal": 0.006925518925518919,
+    "POD residual e(x)": 0.0
+  },
+  "rank": [
+    "physics: NDT (pulse-echo)",
+    "DINOv2-S embedding (PCA 64)",
+    "physics: disease-specific (thickness, fluid, gap, RPE)",
+    "physics: texture: rpe band",
+    "physics: texture: outer band",
+    "physics: texture: inner band",
+    "image-POD (50 modes)",
+    "physics: texture: choroid band",
+    "physics: boundary fractal",
+    "POD residual e(x)"
+  ],
+  "physics_in_top10": [
+    "physics: NDT (pulse-echo)",
+    "physics: disease-specific (thickness, fluid, gap, RPE)",
+    "physics: texture: rpe band",
+    "physics: texture: outer band",
+    "physics: texture: inner band",
+    "image-POD (50 modes)",
+    "physics: texture: choroid band",
+    "physics: boundary fractal",
+    "POD residual e(x)"
+  ]
+}
