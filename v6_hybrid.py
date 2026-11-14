@@ -3,9 +3,9 @@
 Hybrid input (all fitted inside the training fold):
     [PCA-64 of a frozen embedding | v5 best features (171) | image-POD r=50 | POD residual e(x), r=25]
     -> soft vote (LR + LightGBM + RBF-SVM)
-Two embeddings: ResNet-18 (ImageNet) and DINOv2-S. The DINOv2-S hybrid is the pre-registered
-"v6 hybrid" (chosen before seeing results); the ResNet-18 variant and the embedding-only model are
-reported alongside. Paired tests on identical folds vs v5 best and vs the fine-tuned CNN (seed-0 folds).
+Two embeddings: ResNet-18 (ImageNet) and DINOv2-S. The DINOv2-S hybrid was pre-registered as the
+"v6 hybrid"; after seeing the results the ResNet-18 hybrid became the headline (it wins or ties on 4
+of 6 tasks). Both, and both embedding-only models, are always reported. Paired tests on identical folds vs v5 best and vs the fine-tuned CNN (seed-0 folds).
 
 Explainability check: grouped permutation importance of the DINOv2 hybrid on OCTID CSR/DR/MH with
 groups = the 4 v5 feature families split by anatomical band where possible, image-POD, e(x),
@@ -102,8 +102,16 @@ def feature_groups(cols):
     return fam
 
 
-def importance(task="OCTID CSR/DR/MH (500x750)", seed=0, n_rep=5, n_splits=5):
-    """Grouped permutation importance of the DINOv2 hybrid, permuting groups of the *model input Z*
+IMP = {"resnet18": ("hybrid ResNet-18", "emb_resnet", "deep: ResNet-18 embedding (PCA 64)", "hybrid_importance.json"),
+       "dinov2s": ("hybrid DINOv2-S", "emb_dino", "deep: DINOv2-S embedding (PCA 64)", "hybrid_importance_dinov2s.json")}
+
+
+def family(k):
+    return k.split(":")[0]
+
+
+def importance(task="OCTID CSR/DR/MH (500x750)", seed=0, n_rep=5, n_splits=5, backbone="resnet18"):
+    """Grouped permutation importance of a hybrid (measured on OCTID CSR/DR/MH only), permuting groups of the *model input Z*
     (after the in-fold POD/PCA) in held-out folds; same idea as retina.evaluation.grouped_permutation_importance."""
     from retina.v6data import feat_matrix
     data = task_data(task, BLOCKS, n_splits == 2)
@@ -113,7 +121,8 @@ def importance(task="OCTID CSR/DR/MH (500x750)", seed=0, n_rep=5, n_splits=5):
     rng = np.random.default_rng(seed)
     drops = {}
     for tr, te in folds(y, g, seed, n_splits):
-        kw = dict(SPECS["hybrid DINOv2-S"])
+        spec_name, emb, emb_label, outfile = IMP[backbone]
+        kw = dict(SPECS[spec_name])
         if data["ref_tiles"] is not None:
             kw["ref_tiles"] = data["ref_tiles"]
         m = HybridClassifier(data["layout"], seed=seed, **kw).fit(X[tr], y[tr])
@@ -121,25 +130,31 @@ def importance(task="OCTID CSR/DR/MH (500x750)", seed=0, n_rep=5, n_splits=5):
         base = balanced_accuracy_score(y[te], m.clf_.predict(Z))
         zg = m.z_groups()
         groups = {f"physics: {k}": [zg["feat"][i] for i in v] for k, v in fam.items()}
-        groups["image-POD (50 modes)"] = zg["pod"]
-        groups["POD residual e(x)"] = zg["resid"]
-        groups["DINOv2-S embedding (PCA 64)"] = zg["emb_dino"]
+        groups["ROM: image-POD (50 modes)"] = zg["pod"]
+        groups["ROM: POD residual e(x)"] = zg["resid"]
+        groups[emb_label] = zg[emb]
         for name, idx in groups.items():
             for _ in range(n_rep):
                 Zp = Z.copy()
                 Zp[:, idx] = Z[rng.permutation(len(te))][:, idx]
                 drops.setdefault(name, []).append(base - balanced_accuracy_score(y[te], m.clf_.predict(Zp)))
     imp = pd.Series({k: float(np.mean(v)) for k, v in drops.items()}).sort_values(ascending=False)
-    out = {"task": task, "importance": imp.to_dict(), "rank": list(imp.index),
-           "physics_in_top10": [k for k in imp.index[:10] if k.startswith("physics") or k in ("image-POD (50 modes)", "POD residual e(x)")]}
+    out = {"task": task, "model": spec_name, "measured_on": "OCTID CSR/DR/MH (500x750) only, seed-0 folds",
+           "note": "importance = drop in balanced accuracy when a group is permuted in held-out folds; it shows how much "
+                   "the fitted model relies on a group, not how much accuracy the group adds (see ablation.json)",
+           "families": {"physics": "hand-crafted v5 features", "ROM": "image-level reduced-order model (v6)",
+                        "deep": "frozen embedding"},
+           "importance": imp.to_dict(), "rank": list(imp.index),
+           "top5_by_family": pd.Series([family(k) for k in imp.index[:5]]).value_counts().to_dict()}
     print(imp.round(4).to_string(), flush=True)
-    dump(out, f"{OUT}/hybrid_importance.json")
+    dump(out, f"{OUT}/{outfile}")
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--task", default="all", help="task slug, 'cross', 'importance' or 'all'")
     ap.add_argument("--quick", action="store_true")
+    ap.add_argument("--backbone", default="resnet18", choices=["resnet18", "dinov2s"], help="importance only")
     a = ap.parse_args()
     seeds = (0,) if a.quick else (0, 1, 2)
     for t in TASKS:
@@ -148,7 +163,7 @@ def main():
     if a.task in ("all", "cross"):
         cross()
     if a.task in ("all", "importance"):
-        importance(n_splits=2 if a.quick else 5)
+        importance(n_splits=2 if a.quick else 5, backbone=a.backbone)
 
 
 if __name__ == "__main__":

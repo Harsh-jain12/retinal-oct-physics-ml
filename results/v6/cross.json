@@ -143,6 +143,140 @@
         "NORMAL"
       ]
     },
+    "v6 hybrid (ResNet-18 + physics) | none | no TTA": {
+      "bacc": 0.7530534889548525,
+      "bacc_ci": [
+        0.7188783048551187,
+        0.78857966087779
+      ],
+      "acc": 0.7730994152046784,
+      "macro_f1": 0.6809199365916515,
+      "recall_per_class": {
+        "AMD": 0.7636,
+        "DME": 0.619,
+        "NORMAL": 0.8765
+      },
+      "confusion": [
+        [
+          940,
+          207,
+          84
+        ],
+        [
+          41,
+          91,
+          15
+        ],
+        [
+          28,
+          13,
+          291
+        ]
+      ],
+      "classes": [
+        "AMD",
+        "DME",
+        "NORMAL"
+      ]
+    },
+    "v6 hybrid (ResNet-18 + physics) | none | TTA": {
+      "bacc": 0.7526274575026622,
+      "bacc_ci": [
+        0.7158535660018469,
+        0.7892906382998849
+      ],
+      "acc": 0.7988304093567251,
+      "macro_f1": 0.704401344720546,
+      "recall_per_class": {
+        "AMD": 0.8172,
+        "DME": 0.6395,
+        "NORMAL": 0.8012
+      },
+      "confusion": [
+        [
+          1006,
+          186,
+          39
+        ],
+        [
+          47,
+          94,
+          6
+        ],
+        [
+          49,
+          17,
+          266
+        ]
+      ],
+      "classes": [
+        "AMD",
+        "DME",
+        "NORMAL"
+      ]
+    },
+    "v6 hybrid (ResNet-18 + physics) | healthy-ref k=30 | no TTA": {
+      "bacc": 0.7301229755812976,
+      "bacc_sd": 0.017690058597431675,
+      "recall_per_class": {
+        "AMD": 0.6007,
+        "DME": 0.7986,
+        "NORMAL": 0.791
+      },
+      "confusion_summed_over_draws": [
+        [
+          7395,
+          4442,
+          473
+        ],
+        [
+          227,
+          1174,
+          69
+        ],
+        [
+          263,
+          237,
+          1892
+        ]
+      ],
+      "classes": [
+        "AMD",
+        "DME",
+        "NORMAL"
+      ]
+    },
+    "v6 hybrid (ResNet-18 + physics) | healthy-ref k=30 | TTA": {
+      "bacc": 0.7521708312232149,
+      "bacc_sd": 0.017676985931368648,
+      "recall_per_class": {
+        "AMD": 0.639,
+        "DME": 0.798,
+        "NORMAL": 0.8196
+      },
+      "confusion_summed_over_draws": [
+        [
+          7866,
+          4066,
+          378
+        ],
+        [
+          253,
+          1173,
+          44
+        ],
+        [
+          211,
+          221,
+          1960
+        ]
+      ],
+      "classes": [
+        "AMD",
+        "DME",
+        "NORMAL"
+      ]
+    },
     "v6 hybrid (DINOv2-S + physics) | none | no TTA": {
       "bacc": 0.7289129883371303,
       "bacc_ci": [
@@ -278,7 +412,16 @@
       ]
     }
   },
+  "headline": "v6 hybrid (ResNet-18 + physics)",
   "paired": {
+    "v6 hybrid (ResNet-18 + physics) | none | no TTA vs v5 best (soft vote) | none | no TTA": {
+      "diff_bacc": 0.043747840158969264,
+      "diff_ci": [
+        0.021123816132325383,
+        0.06722319320810294
+      ],
+      "p_one_sided": 0.0
+    },
     "v6 hybrid (DINOv2-S + physics) | none | no TTA vs v5 best (soft vote) | none | no TTA": {
       "diff_bacc": 0.01960733954124705,
       "diff_ci": [
@@ -295,6 +438,14 @@
       ],
       "p_one_sided": 1.0
     },
+    "v6 hybrid (ResNet-18 + physics) | none | TTA vs no TTA": {
+      "diff_bacc": -0.0004260314521902231,
+      "diff_ci": [
+        -0.020361429643964177,
+        0.018517379326325897
+      ],
+      "p_one_sided": 0.5245
+    },
     "v6 hybrid (DINOv2-S + physics) | none | TTA vs no TTA": {
       "diff_bacc": 0.0004985874631335818,
       "diff_ci": [
@@ -302,6 +453,14 @@
         0.01898508001401236
       ],
       "p_one_sided": 0.501
+    },
+    "v6 hybrid (ResNet-18 + physics) | none | no TTA vs CNN": {
+      "diff_bacc": -0.17239477980224405,
+      "diff_ci": [
+        -0.20576188098331785,
+        -0.13764446084327012
+      ],
+      "p_one_sided": 1.0
     },
     "v6 hybrid (DINOv2-S + physics) | none | no TTA vs CNN": {
       "diff_bacc": -0.19653528041996626,
@@ -312,5 +471,5 @@
       "p_one_sided": 1.0
     }
   },
-  "best_config": "v6 hybrid (DINOv2-S + physics) | none | TTA"
+  "best_config": "v6 hybrid (ResNet-18 + physics) | none | no TTA"
 }

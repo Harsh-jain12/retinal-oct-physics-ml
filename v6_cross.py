@@ -1,6 +1,6 @@
 """v6 / Step 5: cross-scanner robustness, Kermany (Spectralis) -> OCTDL (Optovue), NORMAL / DME / AMD.
 
-Models: v5 best (soft vote on 171 features) and the v6 hybrid (DINOv2-S + physics), each
+Models: v5 best (soft vote on 171 features) and the v6 hybrids (ResNet-18 = headline, DINOv2-S), each
   * without calibration, or with healthy-reference harmonisation (v5_harmonize.py, k = 30 healthy
     OCTDL patients as the "reference block"; those patients are removed from the test set; 10 draws).
     Here every block is calibrated: per-column z-scores for the features and the embedding, and a
@@ -31,7 +31,9 @@ from retina.v6run import cross_data, cross_summary, dump, model_slug
 warnings.filterwarnings("ignore")
 OUT = "results/v6"
 BLOCKS = ("feat", "tile", "emb_resnet", "emb_dino")
+HEADLINE = "v6 hybrid (ResNet-18 + physics)"
 MODELS = {"v5 best (soft vote)": dict(use=("feat",)),
+          HEADLINE: dict(use=("feat", "pod", "resid", "emb_resnet")),
           "v6 hybrid (DINOv2-S + physics)": dict(use=("feat", "pod", "resid", "emb_dino"))}
 SIGMAS = (0.0, 0.5, 1.0)
 K, DRAWS = 30, 10
@@ -107,9 +109,10 @@ def main():
             print(f"  {key:60s} bacc {np.mean(b):.3f} ± {np.std(b):.3f}", flush=True)
     # paired tests (uncalibrated configs, same test scans)
     k0 = list(preds0)
-    hyb = [k for k in k0 if k.startswith("v6") and k.endswith("| no TTA")][0]
+    hybs = [k for k in k0 if k.startswith("v6") and k.endswith("| no TTA")]
     v5 = [k for k in k0 if k.startswith("v5") and k.endswith("| no TTA")][0]
-    res["paired"] = {f"{hyb} vs {v5}": paired(y, preds0[v5], preds0[hyb], g)}
+    res["headline"] = HEADLINE
+    res["paired"] = {f"{h} vs {v5}": paired(y, preds0[v5], preds0[h], g) for h in hybs}
     for k in k0:
         if k.endswith("| TTA"):
             res["paired"][f"{k} vs no TTA"] = paired(y, preds0[k.replace("| TTA", "| no TTA")], preds0[k], g)
@@ -117,7 +120,8 @@ def main():
     if os.path.exists(cnn):
         c = pd.read_csv(cnn)
         assert (c.path.values == base["paths"]).all()
-        res["paired"][f"{hyb} vs CNN"] = paired(y, c.pred.values, preds0[hyb], g)
+        for h in hybs:
+            res["paired"][f"{h} vs CNN"] = paired(y, c.pred.values, preds0[h], g)
     best = max(res["configs"], key=lambda k: res["configs"][k]["bacc"])
     res["best_config"] = best
     print("best:", best, res["configs"][best]["bacc"])
