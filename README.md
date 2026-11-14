@@ -35,8 +35,9 @@ The work happened in five stages:
 | **v2** Anatomy | Find the retinal layers, measure inside them | Balanced accuracy on the honest disease-only task goes from **0.50 → 0.84** |
 | **v3/v4** NDT + fractal | Pulse-echo (ultrasound-style) features, boundary "coastline" fractals | Small further gains (**0.86–0.87**), detection limits measured (MAPOD) |
 | **v5** ROM + ML | Reduced-order modelling (POD), ensembles, conformal guarantees, scanner calibration | POD explains *why* the paper's grid fails. The ensemble is the best model on Kermany and on the unseen scanner. Triage gets a real, stated guarantee |
+| **v6** Image-level ROM + hybrid | POD of the flattened *image*, healthy-only POD residual (defect detection), frozen deep features + physics, Grad-CAM check | The hybrid beats v5 on every task (e.g. Kermany 4-class 0.734) with physics still ranked first, but the fine-tuned CNN stays ahead, clearly so on a new scanner |
 
-The next step (image-level ROM, hybrid deep + physics model) is written up as a ready-to-run prompt in [`CLAUDE_CODE_PROMPT.md`](CLAUDE_CODE_PROMPT.md).
+v6 (image-level ROM, hybrid deep + physics model) is in [Section 11](#11-v6-image-level-rom-and-a-hybrid-model), summarised in [`results/v6/SUMMARY.md`](results/v6/SUMMARY.md). A presentation deck that explains the whole project is in [Section 12](#12-presentation).
 
 ---
 
@@ -51,33 +52,35 @@ The next step (image-level ROM, hybrid deep + physics model) is written up as a 
 8. [v3: NDT (pulse-echo) features and MAPOD](#8-v3-ndt-pulse-echo-features-and-mapod)
 9. [v4: fractal validation and boundary fractals](#9-v4-fractal-validation-and-boundary-fractals)
 10. [v5: reduced-order modelling and machine learning](#10-v5-reduced-order-modelling-and-machine-learning)
-11. [How we evaluate (and why)](#11-how-we-evaluate-and-why)
-12. [Code map](#12-code-map)
-13. [Limitations and next steps](#13-limitations-and-next-steps)
-14. [Glossary](#14-glossary)
-15. [References](#15-references)
+11. [v6: image-level ROM and a hybrid model](#11-v6-image-level-rom-and-a-hybrid-model)
+12. [Presentation](#12-presentation)
+13. [How we evaluate (and why)](#13-how-we-evaluate-and-why)
+14. [Code map](#14-code-map)
+15. [Limitations and next steps](#15-limitations-and-next-steps)
+16. [Glossary](#16-glossary)
+17. [References](#17-references)
 
 ---
 
 ## 1. Progress at a glance
 
-![progress](results/v5/progress.png)
+![progress](presentation/figures/fig13_progress.png)
 
 Best **balanced accuracy** (patient-grouped 5-fold CV, mean of 3 repeats). Chance is 1/(number of classes).
 
-| Task (chance) | Paper method | v2 | v3 | v4 | **v5 ensemble** | CNN (black box) |
-|---|---|---|---|---|---|---|
-| OCTID CSR / DR / MH, 500×750 only (0.33) | 0.504 | 0.836 | 0.855 | 0.868 | **0.872** | 0.940 |
-| OCTDL 7-class (0.14) | 0.464 | 0.661 | 0.689 | 0.682 | 0.669 (LR alone 0.682) | n/a |
-| Kermany 4-class (0.25) | 0.449 | 0.683 | 0.692 | 0.680 | **0.695** | 0.864 |
-| Kermany → OCTDL, unseen scanner (0.33) | 0.374 | 0.640 | 0.680 | n/a | **0.702** | 0.932 |
+| Task (chance) | Paper method | v2 | v3 | v4 | v5 ensemble | **v6 hybrid** | CNN (black box) |
+|---|---|---|---|---|---|---|---|
+| OCTID CSR / DR / MH, 500×750 only (0.33) | 0.504 | 0.836 | 0.855 | 0.868 | 0.872 | **0.899** | 0.935 |
+| OCTDL 7-class (0.14) | 0.464 | 0.661 | 0.689 | 0.682 | 0.669 (LR alone 0.682) | **0.688** | n/a |
+| Kermany 4-class (0.25) | 0.449 | 0.683 | 0.692 | 0.680 | 0.695 | **0.734** | 0.867 |
+| Kermany → OCTDL, unseen scanner (0.33) | 0.374 | 0.640 | 0.680 | n/a | 0.702 | **0.729** | 0.925 |
 
-*Every cell is the best row of that stage's result file (`results/v5/progress.json` for the first three rows; `results/v2|v3/cross_scanner.json` and `results/v5/harmonize.json` for the last). v4 adds fractal features on top of v3, so a v4 cell can be slightly below v3 when the fractal features add nothing.*
+*Every cell is the best row of that stage's result file (`results/v5/progress.json` for the first three rows; `results/v2|v3/cross_scanner.json` and `results/v5/harmonize.json` for the last). v4 adds fractal features on top of v3, so a v4 cell can be slightly below v3 when the fractal features add nothing. v6 hybrid: `results/v6/hybrid_<task>.json` (DINOv2-S hybrid, chosen before seeing results). CNN: `results/v6/cnn_<task>.json`, fine-tuned ResNet-18 re-run on the *same* folds as every other model so the comparison is paired (the earlier `cnn_baseline.py` runs gave 0.940 / 0.864 / 0.932); not run on OCTDL to stay inside the GPU budget.*
 
 **Bottom line.**
 - The *physics idea* (measure roughness and density) works much better once it is measured **inside anatomical layers** (v2). The paper's fixed pixel grid is the main weakness, and v5's POD analysis shows why: most of its variation is *where the retina sits in the picture*, not disease.
 - Better ML on top of good features adds a little within one scanner (+0.00 to +0.02) and most on the hardest test, an unseen scanner (+0.022 over the previous best).
-- A fine-tuned CNN is still about 7 points better within one scanner. Closing that gap while staying explainable is the v6 plan.
+- v6 adds frozen deep features to the physics and gains 2–4 points over v5 on every task, with a physics group still the most important. A fine-tuned CNN remains better: by 0.036 on OCTID (not significant), 0.133 on Kermany and 0.196 on a new scanner.
 
 ---
 
@@ -98,6 +101,23 @@ pip install -r requirements.txt
 | `python v5_conformal.py` | ~10 min | `results/v5/conformal.json` |
 | `python v5_harmonize.py` | ~3 min | `results/v5/harmonize.json` |
 | `python v5_summary.py` | seconds | `results/v5/progress.png`, `progress.json` |
+
+**v6 needs the images** (it works on the flattened image, not on the feature tables). After downloading (below):
+
+| Command | Time (8-core laptop, 8 GB) | Output |
+|---|---|---|
+| `python v6_tiles.py octid octdl kermany` | ~2 min | flattened 128×512 tiles, `data/cache/v6/` |
+| `python v6_embed.py octid octdl kermany` | ~5 min (Apple GPU) | frozen ResNet-18 / DINOv2-S embeddings |
+| `python v6_image_pod.py` | ~40 min | Step 1, `results/v6/image_pod_*.json` |
+| `python v6_residual.py` | ~60 min | Step 2, `residual_*.json` |
+| `python v6_cnn.py --task octid_dis750` (also `kermany_4`, `cross`) | 6 / 50 / 7 min (GPU) | CNN on the same folds, fold models for Grad-CAM |
+| `python v6_hybrid.py` | ~60 min | Step 3, `hybrid_*.json`, `hybrid_importance.json` |
+| `python v6_gradcam.py` | ~5 min | Step 4, `gradcam_octid_dis750.json` |
+| `python v6_tiles.py octdl --blur 0.5 1 --features` then `python v6_embed.py octdl --blur 0.5 1` and `python v6_cross.py` | ~25 min | Step 5, `cross.json` |
+| `python v6_conformal.py` | ~40 min | Step 6, `conformal.json` |
+| `python v6_baselines.py`, `python v6_figdata.py`, `python v6_paper_claims.py`, `python v6_summary.py` | minutes | figure inputs, `SUMMARY.md` |
+
+Every v6 script takes `--quick` (1 seed, 2 folds) for a smoke test. `pytest tests/` checks that no transformer is ever fitted on test rows.
 
 **To recompute features from images (v1–v4)** you need the datasets:
 
@@ -452,7 +472,181 @@ Train on Kermany (Spectralis), test on OCTDL (Optovue), labels NORMAL / DME / AM
 
 ---
 
-## 11. How we evaluate (and why)
+## 11. v6: image-level ROM and a hybrid model
+
+New code: `retina/image_rom.py`, `retina/hybrid.py`, `retina/v6data.py`, `retina/v6eval.py`, `retina/v6run.py`, scripts `v6_*.py`, test `tests/test_no_leak.py`. All results in `results/v6/`, summary in [`results/v6/SUMMARY.md`](results/v6/SUMMARY.md).
+
+**Same rules as before, made stricter.** Every v6 model uses exactly the folds of `retina.evaluation.oof_predictions` (`StratifiedGroupKFold(5, shuffle=True, random_state=seed)`, seeds 0, 1, 2), so each new number is *paired* with the v5 number on the same patients. Everything learned from data (POD modes, the healthy-only residual basis, PCA of the embeddings, scalers, conformal thresholds) lives inside the model's `fit()` and therefore sees training patients only; `tests/test_no_leak.py` fails if any of them is fitted on a test row. Every script saves its out-of-fold predictions and probabilities (`results/v6/oof_<task>_<model>.csv`).
+
+### 11.1 Eigen-retinas: POD of the flattened image
+
+v5 showed that POD needs a consistent coordinate frame. The flattened retina is one. For every scan we cut a tile from 40 px above the ILM to 60 px below the RPE, ±200 px around the fovea, and resample it to 64 × 256 = 16 384 pixels (masked pixels → training-fold mean):
+
+$$
+A = \begin{bmatrix} (x_1 - \bar x)^T \\ \vdots \\ (x_n - \bar x)^T \end{bmatrix} \in \mathbb{R}^{n \times 16384}, \qquad
+A \approx U_r \Sigma_r V_r^T \;\;(\text{randomized SVD}), \qquad a = V_r^T (x - \bar x)
+$$
+
+![eigen-retinas](presentation/figures/fig14a_image_pod_modes.png)
+
+The modes now look like anatomy (layer brightness, thickness, the foveal dip) instead of retina position.
+
+| Task | Image-POD alone, best r (model) | v5 best | v5 best + image-POD r=50 | Paired Δ [95% CI], one-sided p |
+|---|---|---|---|---|
+| OCTID CSR/DR/MH (500x750) | 0.696 [0.646, 0.755] (r=100, LR) | 0.872 [0.833, 0.911] | 0.881 [0.855, 0.924] | +0.015 [-0.010, +0.041], p = 0.141 |
+| OCTDL 7-class | 0.439 [0.377, 0.479] (r=25, LR) | 0.669 [0.605, 0.723] | 0.664 [0.606, 0.720] | -0.002 [-0.015, +0.010], p = 0.637 |
+| OCTDL 6 diseases | 0.423 [0.357, 0.469] (r=10, LR) | 0.653 [0.589, 0.722] | 0.634 [0.558, 0.690] | -0.029 [-0.061, -0.005], p = 0.992 |
+| Kermany 4-class | 0.537 [0.509, 0.558] (r=50, LightGBM) | 0.695 [0.671, 0.718] | 0.698 [0.678, 0.724] | +0.006 [-0.004, +0.015], p = 0.123 |
+| Kermany CNV/DME/DRUSEN | 0.611 [0.578, 0.635] (r=25, LightGBM) | 0.731 [0.706, 0.765] | 0.731 [0.708, 0.765] | +0.001 [-0.013, +0.015], p = 0.456 |
+| Kermany -> OCTDL (NORMAL/DME/AMD) | 0.546 [0.508, 0.584] (r=200, LR) | 0.709 [0.673, 0.743] | 0.693 [0.657, 0.730] | -0.017 [-0.036, +0.002], p = 0.963 |
+
+*Source: `results/v6/image_pod_<task>.json`.*
+
+**Reading.** The image modes alone are much weaker than the hand-crafted physics features, and adding them to v5 changes nothing significant (best case OCTID, p = 0.14; worst case OCTDL 6 diseases, −0.029). An honest negative: *a good coordinate frame makes POD interpretable, but the energetic image patterns are still not the diagnostic ones* (the v5 "energy ≠ information" lesson again).
+
+### 11.2 POD residual: ROM-based defect detection
+
+In NDT, a part is flagged when it cannot be explained by a model of good parts. Here: fit POD on **healthy training eyes only**, then for a new scan
+
+$$
+e(x) = \frac{\lVert x - \bar x - V_r V_r^T (x - \bar x) \rVert^2}{\lVert x - \bar x \rVert^2}
+$$
+
+is the fraction of its deviation from the average healthy retina that the healthy modes cannot rebuild. The residual image $x - \hat x$ shows *where* it departs.
+
+![residual maps](presentation/figures/fig14c_residual_maps_kermany_4.png)
+
+| NORMAL vs ABNORMAL | AUROC r=10 | AUROC r=25 [95% CI] | AUROC r=50 |
+|---|---|---|---|
+| OCTDL 7-class | 0.665 | 0.696 [0.659, 0.731] | 0.717 |
+| Kermany 4-class | 0.660 | 0.700 [0.673, 0.732] | 0.720 |
+| Kermany healthy -> OCTDL (NORMAL vs ABNORMAL) | 0.659 | 0.691 [0.656, 0.724] | 0.708 |
+
+*Source: `results/v6/residual_auroc.json`.*
+
+| Task | v5 best + e(x) | Paired Δ vs v5 best |
+|---|---|---|
+| OCTID CSR/DR/MH (500x750) | 0.875 [0.846, 0.920] | +0.011 [+0.000, +0.027], p = 0.049 |
+| OCTDL 7-class | 0.666 [0.607, 0.724] | +0.000 [-0.007, +0.008], p = 0.476 |
+| OCTDL 6 diseases | 0.649 [0.584, 0.716] | -0.005 [-0.014, +0.004], p = 0.859 |
+| Kermany 4-class | 0.699 [0.673, 0.721] | +0.003 [-0.004, +0.010], p = 0.202 |
+| Kermany CNV/DME/DRUSEN | 0.729 [0.704, 0.762] | -0.003 [-0.010, +0.005], p = 0.746 |
+| Kermany -> OCTDL (NORMAL/DME/AMD) | 0.704 [0.667, 0.739] | -0.005 [-0.018, +0.006], p = 0.821 |
+
+*Source: `results/v6/residual_clf.json`.*
+
+**Reading.** With no disease labels at all, e(x) separates healthy from diseased eyes with AUROC ≈ 0.70, and the same healthy basis transfers to the other scanner almost unchanged (0.691). It is a useful, explainable screening signal, but as one more feature next to 171 physics features it is redundant.
+
+### 11.3 Hybrid: frozen deep features + physics
+
+A frozen network (never trained on our labels) turns each tile into an embedding: ResNet-18 (ImageNet, 512 numbers) or DINOv2-S (self-supervised, 384 numbers). Inside each training fold we reduce it with PCA to 64 numbers and concatenate
+
+$$
+z = [\,\text{PCA}_{64}(\text{embedding}),\; \text{v5 features (171)},\; \text{image-POD } a_{1..50},\; \log e(x)\,] \;\to\; \text{soft vote (LR + LightGBM + SVM)}
+$$
+
+The DINOv2-S hybrid was chosen as "the v6 model" before seeing any result. The fine-tuned CNN (`v6_cnn.py`, same recipe as `cnn_baseline.py`) was re-run on the identical folds so the comparison is paired.
+
+![hybrid vs CNN](presentation/figures/fig14e_hybrid_vs_cnn.png)
+
+| Task | Hybrid DINOv2-S | Hybrid ResNet-18 | DINOv2-S only | ResNet-18 only | CNN (fine-tuned) | Hybrid DINOv2-S − CNN |
+|---|---|---|---|---|---|---|
+| OCTID CSR/DR/MH (500x750) | 0.899 [0.864, 0.933] | 0.904 [0.865, 0.932] | 0.865 [0.831, 0.908] | 0.908 [0.884, 0.948] | 0.935 [0.905, 0.961] | -0.036 [-0.078, +0.004], p = 0.965 |
+| OCTDL 7-class | 0.688 [0.632, 0.748] | 0.708 [0.657, 0.764] | 0.600 [0.541, 0.649] | 0.671 [0.603, 0.709] | n/a | n/a |
+| OCTDL 6 diseases | 0.669 [0.602, 0.736] | 0.682 [0.616, 0.741] | 0.581 [0.520, 0.655] | 0.649 [0.585, 0.704] | n/a | n/a |
+| Kermany 4-class | 0.734 [0.715, 0.759] | 0.730 [0.704, 0.750] | 0.683 [0.668, 0.711] | 0.695 [0.670, 0.715] | 0.867 [0.851, 0.885] | -0.130 [-0.152, -0.108], p = 1.000 |
+| Kermany CNV/DME/DRUSEN | 0.763 [0.740, 0.791] | 0.759 [0.735, 0.789] | 0.722 [0.691, 0.742] | 0.718 [0.701, 0.751] | n/a | n/a |
+| Kermany -> OCTDL (NORMAL/DME/AMD) | 0.729 [0.694, 0.766] | 0.753 [0.719, 0.789] | 0.683 [0.647, 0.717] | 0.737 [0.702, 0.770] | 0.925 [0.908, 0.940] | -0.197 [-0.232, -0.159], p = 1.000 |
+
+Grouped permutation importance of the DINOv2-S hybrid on OCTID CSR/DR/MH (drop in balanced accuracy):
+
+| Rank | Group | Importance |
+|---|---|---|
+| 1 | physics: NDT (pulse-echo) | 0.0647 |
+| 2 | DINOv2-S embedding (PCA 64) | 0.0563 |
+| 3 | physics: disease-specific (thickness, fluid, gap, RPE) | 0.0398 |
+| 4 | physics: texture: rpe band | 0.0347 |
+| 5 | physics: texture: outer band | 0.0217 |
+| 6 | physics: texture: inner band | 0.0197 |
+| 7 | image-POD (50 modes) | 0.0111 |
+| 8 | physics: texture: choroid band | 0.0087 |
+| 9 | physics: boundary fractal | 0.0069 |
+| 10 | POD residual e(x) | 0.0000 |
+
+*Source: `results/v6/hybrid_<task>.json`, `cnn_<task>.json`, `hybrid_importance.json`.*
+
+**Acceptance check (stated plainly).** The target was to match the fine-tuned CNN within the CI on OCTID CSR/DR/MH while keeping physics features in the top-10 importances. The paired difference is -0.036 with 95% CI [-0.078, +0.004]: the interval *just* includes zero, so it is not significantly worse, but the point estimate is 3.6 points lower, and on Kermany and on the new scanner the CNN is clearly better. The physics part is not decorative: the NDT pulse-echo group is the single most important group, ahead of the embedding. (With only 10 groups, "in the top 10" is automatic, so we report the top-5 share instead.) **The hybrid does not close the gap to the CNN; it narrows it while staying explainable.**
+
+### 11.4 Does the CNN look where the physics looks?
+
+Grad-CAM weights the last convolutional feature maps $A_c$ by the average gradient of the class score, $\text{CAM} = \text{ReLU}(\sum_c w_c A_c)$, $w_c = \overline{\partial y / \partial A_c}$. We map each CAM onto the flattened retina with the same column shifts as `retina.layers.flatten`, sum it inside each band, and compare with the physics model's per-band permutation importance.
+
+![gradcam](presentation/figures/fig14d_gradcam_vs_physics.png)
+
+| Band | CAM share CSR | CAM share DR | CAM share MH | physics recall drop CSR | physics recall drop DR | physics recall drop MH |
+|---|---|---|---|---|---|---|
+| inner | 0.120 | 0.122 | 0.137 | 0.116 | 0.029 | -0.010 |
+| outer | 0.148 | 0.169 | 0.168 | 0.020 | 0.121 | 0.008 |
+| rpe | 0.081 | 0.082 | 0.081 | 0.104 | 0.072 | 0.010 |
+| choroid | 0.251 | 0.275 | 0.233 | 0.016 | 0.066 | -0.002 |
+
+Spearman ρ over the 12 band × class cells: -0.22 (p = 0.48). *Source: `results/v6/gradcam_octid_dis750.json`.*
+
+**Reading.** No agreement (ρ = -0.22). The CNN spends about a quarter of its attention in the choroid band, where the physics model finds little; the physics model uses the inner retina for CSR and the outer retina for DR. Either the CNN uses choroidal/shadowing cues the hand-crafted features miss, or it uses context we would not call pathology. This is a question, not an answer, and a good one for future work.
+
+### 11.5 Cross-scanner robustness (Kermany → OCTDL)
+
+Two NDT-style corrections: a **reference block** (z-score every input block with k = 30 healthy eyes of the target scanner, removed from the test set, 10 draws) and **speckle-matched test-time augmentation** (blur the test scan with σ ∈ {0, 0.5, 1} px, recompute *every* feature, average the probabilities).
+
+![harmonisation](presentation/figures/fig12_harmonisation.png)
+
+| Model | Calibration | TTA | Balanced acc | Recall NORMAL / DME / AMD |
+|---|---|---|---|---|
+| v5 best (soft vote) | none | no TTA | 0.709 | 0.79 / 0.55 / 0.78 |
+| v5 best (soft vote) | none | TTA | 0.670 | 0.66 / 0.50 / 0.85 |
+| v5 best (soft vote) | healthy-ref k=30 | no TTA | 0.682 ± 0.015 | 0.72 / 0.75 / 0.57 |
+| v5 best (soft vote) | healthy-ref k=30 | TTA | 0.705 ± 0.018 | 0.75 / 0.74 / 0.62 |
+| v6 hybrid (DINOv2-S + physics) | none | no TTA | 0.729 | 0.81 / 0.58 / 0.79 |
+| v6 hybrid (DINOv2-S + physics) | none | TTA | 0.729 | 0.73 / 0.63 / 0.83 |
+| v6 hybrid (DINOv2-S + physics) | healthy-ref k=30 | no TTA | 0.701 ± 0.015 | 0.77 / 0.70 / 0.63 |
+| v6 hybrid (DINOv2-S + physics) | healthy-ref k=30 | TTA | 0.719 ± 0.015 | 0.77 / 0.73 / 0.66 |
+
+Paired tests: v6 hybrid (DINOv2-S + physics) | none | no TTA vs v5 best (soft vote) | none | no TTA: +0.020 [-0.004, +0.046], p = 0.061; v5 best (soft vote) | none | TTA vs no TTA: -0.039 [-0.060, -0.021], p = 1.000; v6 hybrid (DINOv2-S + physics) | none | TTA vs no TTA: +0.000 [-0.017, +0.019], p = 0.501; v6 hybrid (DINOv2-S + physics) | none | no TTA vs CNN: -0.197 [-0.232, -0.159], p = 1.000
+
+*Source: `results/v6/cross.json`.*
+
+**Reading.** The hybrid is the best non-CNN model on the new scanner (0.729), but the CNN reaches 0.925. Calibration with healthy eyes trades AMD recall for DME recall and lowers balanced accuracy overall; TTA leaves the hybrid unchanged and hurts v5. **DME recall is still the weak point.** Affine calibration cannot fix texture differences between scanners, the same conclusion as v5.
+
+### 11.6 Conformal triage on the hybrid
+
+| Task | Target | Coverage per class | Mean set size (v5) | Singleton rate (v5) | Singleton accuracy (v5) |
+|---|---|---|---|---|---|
+| OCTDL triage NORMAL vs ABNORMAL | 0.95 | ABNORMAL 0.951, NORMAL 0.961 | 1.06 (1.08) | 0.94 (0.92) | 0.951 (0.952) |
+| OCTDL triage NORMAL vs ABNORMAL | 0.90 | ABNORMAL 0.901, NORMAL 0.914 | 0.97 (0.98) | 0.96 (0.96) | 0.939 (0.931) |
+| Kermany triage NORMAL vs ABNORMAL | 0.95 | ABNORMAL 0.942, NORMAL 0.938 | 1.18 (1.27) | 0.82 (0.73) | 0.928 (0.921) |
+| Kermany triage NORMAL vs ABNORMAL | 0.90 | ABNORMAL 0.891, NORMAL 0.889 | 1.04 (1.09) | 0.95 (0.91) | 0.893 (0.878) |
+| OCTID CSR/DR/MH (500x750) | 0.95 | CSR 1.000, DR 0.961, MH 0.931 | 2.03 (2.10) | 0.19 (0.18) | 0.934 (0.948) |
+| OCTID CSR/DR/MH (500x750) | 0.90 | CSR 0.926, DR 0.936, MH 0.863 | 1.11 (1.25) | 0.86 (0.75) | 0.913 (0.910) |
+| Kermany CNV/DME/DRUSEN | 0.95 | CNV 0.947, DME 0.956, DRUSEN 0.947 | 1.75 (1.82) | 0.39 (0.33) | 0.908 (0.899) |
+| Kermany CNV/DME/DRUSEN | 0.90 | CNV 0.905, DME 0.900, DRUSEN 0.900 | 1.47 (1.53) | 0.57 (0.52) | 0.859 (0.841) |
+
+*Source: `results/v6/conformal.json` (v5 values copied from `results/v5/conformal.json`).*
+
+**Reading.** The guarantee holds for the hybrid as it did for v5 (ABNORMAL coverage 0.951 at target 0.95 on OCTDL), and because the hybrid is more accurate the prediction sets are smaller on every task: fewer scans need a second opinion for the same guarantee.
+
+---
+
+## 12. Presentation
+
+[![deck preview](presentation/preview.png)](presentation/Retinal_OCT_Physics_ML.pptx)
+
+- Deck: [`presentation/Retinal_OCT_Physics_ML.pptx`](presentation/Retinal_OCT_Physics_ML.pptx) (26 slides, 16:9, speaker notes on every slide), PDF: [`presentation/Retinal_OCT_Physics_ML.pdf`](presentation/Retinal_OCT_Physics_ML.pdf).
+- Rebuild: `python make_figures.py && python make_deck.py --pdf`. `make_figures.py` reads only `results/` and writes `presentation/figures/*.png`; `make_deck.py` builds the deck with python-pptx.
+- Every number on a slide is read from `results/` at build time and listed with its source file in [`presentation/numbers.json`](presentation/numbers.json) (figure values in `presentation/figures/figure_numbers.json`).
+
+---
+
+## 13. How we evaluate (and why)
 
 | Practice | Why |
 |---|---|
@@ -466,7 +660,7 @@ Train on Kermany (Spectralis), test on OCTDL (Optovue), labels NORMAL / DME / AM
 
 ---
 
-## 12. Code map
+## 14. Code map
 
 ```
 retina/
@@ -481,33 +675,41 @@ retina/
   ensemble.py       v5: LR, LightGBM, RBF-SVM, soft vote
   conformal.py      v5: class-conditional split conformal prediction
   plotstyle.py      shared figure style
+  image_rom.py      v6: flattened-retina tiles, ImagePOD (randomized SVD, residual e(x))
+  hybrid.py         v6: HybridClassifier (POD / residual / PCA fitted inside fit())
+  v6data.py v6eval.py v6run.py   v6: tasks, identical folds, OOF CSVs, paired tests
 v5_rom.py  v5_ensemble.py  v5_conformal.py  v5_harmonize.py  v5_summary.py
+v6_tiles.py v6_embed.py v6_image_pod.py v6_residual.py v6_cnn.py v6_hybrid.py v6_gradcam.py
+v6_cross.py v6_conformal.py v6_baselines.py v6_figdata.py v6_paper_claims.py v6_summary.py
+make_figures.py make_deck.py   presentation (figures from results/ only, python-pptx deck)
+tests/test_no_leak.py          fails if any transformer is fitted on test rows
 CLAUDE_CODE_PROMPT.md   step-by-step v6 plan (image-level ROM, hybrid deep + physics)
 results/                v1  (paper reproduction)
-results/v2 ... v5       per-stage outputs (CSV/JSON/PNG/MD)
+results/v2 ... v6       per-stage outputs (CSV/JSON/PNG/MD/NPZ)
 ```
 
 ---
 
-## 13. Limitations and next steps
+## 15. Limitations and next steps
 
 **Limitations**
 - OCTID has no patient IDs; each image is treated as its own patient (could be optimistic if one patient has several images).
 - All datasets are display JPEGs (log-compressed, contrast-stretched), so NDT quantities are *relative*, not physical units.
 - Lateral pixel spacing is not stored; 6 mm / 512 columns is assumed where µm sizes are quoted.
 - The v5 ensemble gains are small and not significant on OCTID or OCTDL. The robust win is on Kermany and across scanners.
+- The CNN was run on 3 of the 6 tasks (OCTID CSR/DR/MH, Kermany 4-class, Kermany → OCTDL) to stay inside a 2-hour GPU budget, with one seed (seed-0 folds).
+- The v6 hybrid relies on frozen ImageNet (ResNet-18) and self-supervised (DINOv2-S) backbones that were never tuned on OCT.
 - Everything is 2-D. Disease is 3-D (the paper's "3D anisotropic" future work needs volume data, which none of these datasets provide).
 
-**Next (v6, see [`CLAUDE_CODE_PROMPT.md`](CLAUDE_CODE_PROMPT.md))**
-1. POD of the **RPE-flattened image** ("eigen-retinas"), now in an anatomical frame.
-2. POD **residual anomaly score**: fit POD on healthy eyes only; a diseased scan is one the healthy modes cannot reconstruct. The residual map shows *where*. This is ROM-based defect detection, standard in NDT.
-3. **Hybrid model**: frozen CNN / DINOv2 embeddings + physics features, aiming at the CNN's 0.94 while keeping physics in the top importances.
-4. Grad-CAM vs physics importance agreement per anatomical band.
-5. Conformal triage on the best hybrid.
+**Next steps after v6**
+1. Find out what the CNN sees in the choroid band (Section 11.4): occlusion tests per band, or choroid-specific NDT features (shadowing, vessel lumen texture).
+2. Scanner robustness needs more than affine calibration: train on two scanners and test on the third, or learn a scanner-invariant tile representation.
+3. Fine-tune the hybrid's backbone (with physics features kept as a parallel branch) and re-check the importance ranking.
+4. 3-D volumes (the paper's "3D anisotropic" idea) would let POD and the NDT features use the full scan, not one B-scan.
 
 ---
 
-## 14. Glossary
+## 16. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -522,11 +724,14 @@ results/v2 ... v5       per-stage outputs (CSV/JSON/PNG/MD)
 | Balanced accuracy | Mean of per-class recalls |
 | Conformal prediction | Turns scores into label *sets* with guaranteed coverage $\ge 1-\alpha$ |
 | Confound | A non-medical factor (here: scanner) that differs between classes and lets a model cheat |
+| Eigen-retina | A POD mode of the flattened retina image |
+| POD residual e(x) | Fraction of a scan's deviation that the healthy-eye POD modes cannot rebuild |
+| Grad-CAM | Heat map of where a CNN's class score depends on the image |
 | MAPOD, $a_{90/95}$ | Probability-of-detection curve from simulated flaws; smallest size found 90% of the time with 95% confidence |
 
 ---
 
-## 15. References
+## 17. References
 
 - Banerjee R., Sarkar S., Munshi P. *Multi-Parametric Retinal Diagnostics: A Deterministic Physics-Based Engine for Tomographic Classification.* IIT Gandhinagar.
 - Munshi P., Rathore R.K.S., Ram K.S., Kalra M.S. *Error estimates for tomographic inversion.* Inverse Problems 7(3), 399–408, 1991.
@@ -542,3 +747,7 @@ results/v2 ... v5       per-stage outputs (CSV/JSON/PNG/MD)
 - Angelopoulos A.N., Bates S. *A gentle introduction to conformal prediction and distribution-free uncertainty quantification.* arXiv:2107.07511, 2021.
 - Johnson W.E., Li C., Rabinovic A. *Adjusting batch effects in microarray expression data using empirical Bayes methods* (ComBat). Biostatistics 8(1), 2007.
 - MIL-HDBK-1823A. *Nondestructive Evaluation System Reliability Assessment.* US DoD, 2009.
+- Halko N., Martinsson P.G., Tropp J.A. *Finding structure with randomness: probabilistic algorithms for constructing approximate matrix decompositions.* SIAM Review 53(2), 2011.
+- Oquab M. et al. *DINOv2: Learning robust visual features without supervision.* TMLR, 2024.
+- He K. et al. *Deep residual learning for image recognition.* CVPR 2016.
+- Selvaraju R.R. et al. *Grad-CAM: Visual explanations from deep networks via gradient-based localization.* ICCV 2017.
