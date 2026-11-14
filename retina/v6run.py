@@ -19,7 +19,7 @@ from retina.v6eval import argmax_labels, oof_proba, paired, save_oof, summarise
 EMB = {"emb_resnet": "resnet18", "emb_dino": "dinov2s"}
 
 
-def _blocks(ds, rows, d, blocks, blur=0.0, tiles=None, feat_df=None):
+def _blocks(ds, rows, d, blocks, blur=0.0, tiles=None, feat_df=None, cols=None):
     out = {}
     if "rowid" in blocks:
         out["rowid"] = np.arange(len(rows))
@@ -28,7 +28,7 @@ def _blocks(ds, rows, d, blocks, blur=0.0, tiles=None, feat_df=None):
         t = tiles if tiles is not None else load_tiles(ds, blur)
         out["tile"] = to_lo(t["hi"][rows] / 255.0, t["valid"][rows])
     if "feat" in blocks:
-        out["feat"] = feat_matrix(feat_df if feat_df is not None else d)[0]
+        out["feat"] = feat_matrix(feat_df if feat_df is not None else d, cols)[0]
     for b, net in EMB.items():
         if b in blocks:
             out[b] = load_emb(ds, net, blur)[rows]
@@ -104,10 +104,13 @@ def cross_data(blocks=("feat", "tile"), test_blur=0.0, test_feat_df=None):
     fdf = None
     if test_feat_df is not None:                       # features recomputed on blurred test images
         fdf = te_df[["path"]].merge(test_feat_df, on="path", how="left")
-        from retina.evaluation import add_band_summaries, add_row_summaries
-        fdf = add_band_summaries(add_row_summaries(fdf))
-    Xtr, layout = assemble(**_blocks("kermany", tr_rows, tr_df, blocks))
-    Xte, layout2 = assemble(**_blocks("octdl", te_rows, te_df, blocks, blur=test_blur, feat_df=fdf))
+        from retina.evaluation import add_band_summaries
+        fdf = add_band_summaries(fdf)                  # (no paper-grid columns: not in the v5 set)
+    from retina.evaluation import feature_sets
+    from retina.v6data import FSET
+    cols = feature_sets(tr_df)[FSET]                   # test columns in the training order
+    Xtr, layout = assemble(**_blocks("kermany", tr_rows, tr_df, blocks, cols=cols))
+    Xte, layout2 = assemble(**_blocks("octdl", te_rows, te_df, blocks, blur=test_blur, feat_df=fdf, cols=cols))
     assert layout == layout2
     return {"task": CROSS, "slug": SLUG[CROSS], "Xtr": Xtr, "ytr": tr_df.label.values, "Xte": Xte,
             "yte": te_df.label.values, "gte": te_df.patient.values, "layout": layout,
