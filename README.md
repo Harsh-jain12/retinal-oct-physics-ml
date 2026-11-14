@@ -1,5 +1,24 @@
 # Multi-Parametric Retinal Diagnostics: reproduction, audit and improvement
 
+[![smoke](https://github.com/Harsh-jain12/retinal-oct-physics-ml/actions/workflows/smoke.yml/badge.svg)](https://github.com/Harsh-jain12/retinal-oct-physics-ml/actions/workflows/smoke.yml)
+
+## Team and credits
+
+| Member | |
+|---|---|
+| Dhvani Shah | |
+| Tapnanshu Gandhi | |
+| Tanushka Sonde | original repository (v1–v4) |
+| Rathod Sai Tejashwini | |
+
+IIT Gandhinagar · NDT course project.
+
+- **Built on** Tanushka Sonde's original repository, [Tanushka-Sonde/Multi-Parametric-Retinal-Diagnostics](https://github.com/Tanushka-Sonde/Multi-Parametric-Retinal-Diagnostics). Its full git history is kept here, so every original commit stays credited.
+- **Original paper:** R. Banerjee, S. Sarkar, P. Munshi, *Multi-Parametric Retinal Diagnostics: A Deterministic Physics-Based Engine for Tomographic Classification*, IIT Gandhinagar. (The PDF in this repo, [`pdf&rendition=1.pdf`](pdf%26rendition%3D1.pdf), is the KT-1 reference paper by Athe et al. 2013, not the Banerjee paper.)
+- License: [MIT](LICENSE).
+
+---
+
 This repository reproduces, stress-tests and extends
 
 > R. Banerjee, S. Sarkar, P. Munshi, *"Multi-Parametric Retinal Diagnostics: A Deterministic Physics-Based Engine for Tomographic Classification"*, IIT Gandhinagar.
