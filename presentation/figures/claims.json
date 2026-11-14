@@ -7,7 +7,7 @@
   },
   {
     "claim": "NORMAL triage precision/recall 1.00, 'mathematically guaranteed'",
-    "found": "Scanner confound: image size alone separates NORMAL with 100%; resized disease scans called NORMAL 63/63. A stated guarantee via conformal prediction: ABNORMAL coverage 0.951 at target 0.95 (OCTDL)",
+    "found": "Scanner confound: image size alone separates NORMAL with 100%; resized disease scans called NORMAL 63/63. A stated guarantee via conformal prediction: ABNORMAL coverage 0.945 at target 0.95 (OCTDL)",
     "verdict": "does not hold as stated",
     "evidence": "results/sanity_checks.json, results/v6/conformal.json"
   },

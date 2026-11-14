@@ -40,7 +40,8 @@ GRID_TASK = {"OCTID CSR/DR/MH (500x750)": ("octid", "disease-only, 500x750 scans
              "OCTDL 6 diseases": ("octdl", "disease-only (AMD/DME/ERM/RAO/RVO/VID)"),
              "Kermany 4-class": ("kermany", "all classes (CNV/DME/DRUSEN/NORMAL)"),
              "Kermany CNV/DME/DRUSEN": ("kermany", "disease-only (CNV/DME/DRUSEN)")}
-HYB = "hybrid DINOv2-S"
+HYB = "hybrid ResNet-18"          # headline v6 model (DINOv2-S hybrid was pre-registered; kept in all tables)
+HYB2 = "hybrid DINOv2-S"
 
 
 # ============================================================================ helpers
@@ -117,13 +118,9 @@ def v6_models(task):
 
 
 def v6_best(task):
-    """Our best physics-based model for a task (highest balanced accuracy among v6 models that use the
-    physics features; the CNN and the embedding-only references are excluded)."""
-    m = {k: v for k, v in v6_models(task).items() if "embedding only" not in k}
-    if not m:
-        return None, None
-    k = max(m, key=lambda n: m[n]["bacc"])
-    return k, m[k]
+    """The headline v6 model (ResNet-18 hybrid) for a task: (name, summary)."""
+    m = v6_models(task)
+    return (HYB, m[HYB]) if HYB in m else (None, None)
 
 
 def model_slug(name):
@@ -323,7 +320,7 @@ def fig_confusions():
     for letter, task in (("c", "OCTID CSR/DR/MH (500x750)"), ("d", "OCTDL 7-class"), ("e", "Kermany 4-class")):
         name, _ = v6_best(task)
         src = V6 / f"oof_{SLUG[task]}_{model_slug(name)}.csv" if name else V6 / f"oof_{SLUG[task]}_?.csv"
-        panels.append((letter, f"Our best physics-based ({name or 'n/a'})\n{task.replace(' (500x750)', ' 500×750')}", src, None))
+        panels.append((letter, f"v6 {name or 'hybrid (n/a)'} (headline)\n{task.replace(' (500x750)', ' 500×750')}", src, None))
     cr = js(V6 / "cross.json")
     if cr:
         best = cr["best_config"]
@@ -467,7 +464,8 @@ def fig_rom():
 def stage_values():
     """rows -> {task: (bacc, ci or None, source)}"""
     rows = {k: {} for k in ["Paper RF", "v2 anatomy", "v3 + NDT", "v4 + fractal", "LR", "LightGBM", "Soft vote",
-                            "CNN (fine-tuned)", "v6 hybrid"]}
+                            "CNN (fine-tuned)", "ResNet-18 emb. only", "DINOv2-S emb. only", "v6 hybrid DINOv2-S",
+                            "v6 hybrid ResNet-18"]}
     for task, (ds, gt) in GRID_TASK.items():
         for v, row in (("v2", "v2 anatomy"), ("v3", "v3 + NDT")):
             g = pd.read_csv(R / v / f"{ds}_model_grid.csv")
@@ -510,9 +508,10 @@ def stage_values():
         if c:
             rows["CNN (fine-tuned)"][t] = (c["bacc"], tuple(c["bacc_ci"]) if "bacc_ci" in c else None, V6 / f"cnn_{SLUG[t]}.json")
         m = v6_models(t)
-        if HYB in m:
-            rows["v6 hybrid"][t] = (m[HYB]["bacc"], tuple(m[HYB].get("bacc_ci", [np.nan, np.nan])),
-                                   V6 / f"hybrid_{SLUG[t]}.json")
+        for row, key in (("v6 hybrid ResNet-18", HYB), ("v6 hybrid DINOv2-S", HYB2),
+                         ("ResNet-18 emb. only", "ResNet-18 embedding only"), ("DINOv2-S emb. only", "DINOv2-S embedding only")):
+            if key in m:
+                rows[row][t] = (m[key]["bacc"], tuple(m[key].get("bacc_ci", [np.nan, np.nan])), V6 / f"hybrid_{SLUG[t]}.json")
     return rows
 
 
@@ -607,7 +606,7 @@ def fig_harmonise():
 # ============================================================================ figure 13: progress
 def fig_progress(rows):
     order = [("Paper RF", "paper method"), ("v2 anatomy", "v2"), ("v3 + NDT", "v3"), ("v4 + fractal", "v4"),
-             ("Soft vote", "v5 vote"), ("v6 hybrid", "v6 hybrid"), ("CNN (fine-tuned)", "CNN")]
+             ("Soft vote", "v5 vote"), ("v6 hybrid ResNet-18", "v6 hybrid"), ("CNN (fine-tuned)", "CNN")]
     fig, axs = plt.subplots(2, 3, figsize=(19, 10), sharey=True)
     cols = [ps.SERIES[1], ps.SEQ_BLUE[1], ps.SEQ_BLUE[2], ps.SEQ_BLUE[3], ps.SEQ_BLUE[4], ps.SEQ_BLUE[6], ps.INK2]
     for ax, t in zip(axs.ravel(), TASKS):
@@ -723,7 +722,7 @@ def fig_v6():
 
     # (e) hybrid vs CNN vs v5
     fig, ax = plt.subplots(figsize=(15, 6.2))
-    series = [("v5 best (soft vote)", ps.SEQ_BLUE[3]), (HYB, ps.SEQ_BLUE[6]), ("CNN", ps.SERIES[1])]
+    series = [("v5 best (soft vote)", ps.SEQ_BLUE[3]), (HYB, ps.SEQ_BLUE[6]), ("CNN", ps.SERIES[1])]  # HYB = ResNet-18 hybrid
     x = np.arange(len(TASKS))
     for k, (name, col) in enumerate(series):
         for i, t in enumerate(TASKS):
@@ -745,6 +744,40 @@ def fig_v6():
     ax.set_title("v6 hybrid vs v5 and the fine-tuned CNN (95% CI; CNN run on 3 tasks)", loc="left")
     ax.legend(loc="upper center", ncol=3, bbox_to_anchor=(0.5, -0.17))
     save(fig, "fig14e_hybrid_vs_cnn.png")
+
+
+# ============================================================================ figure 14f: ablation
+def fig_ablation():
+    ab = js(V6 / "ablation.json")
+    fig, ax = plt.subplots(figsize=(15, 6.4))
+    if not ab:
+        missing(ax, "v6_ablation.py"); save(fig, "fig14f_ablation.png"); return
+    series = [("ResNet-18 embedding only", ps.SEQ_BLUE[2], "ResNet-18 embedding only"),
+              ("hybrid ResNet-18", ps.SEQ_BLUE[6], "ResNet-18 + physics + ROM (headline)"),
+              ("DINOv2-S embedding only", "#f6c3a6", "DINOv2-S embedding only"),
+              ("hybrid DINOv2-S", ps.SERIES[1], "DINOv2-S + physics + ROM")]
+    w = 0.2
+    for i, t in enumerate(TASKS):
+        m = ab["tasks"][t]["models"]
+        for k, (name, col, lab) in enumerate(series):
+            v, ci = m[name]["bacc"], m[name].get("bacc_ci")
+            x = i + (k - 1.5) * w
+            ax.bar(x, v, width=w * 0.95, color=col, edgecolor=ps.SURFACE, lw=1.5, label=lab if i == 0 else None)
+            if ci:
+                ax.errorbar(x, v, yerr=[[v - ci[0]], [ci[1] - v]], color=ps.INK, capsize=3, lw=1.1)
+            record("fig14f_ablation", f"{name} | {t}", v, V6 / "ablation.json")
+        p = ab["tasks"][t]["paired"]["hybrid ResNet-18 vs ResNet-18 embedding only"]
+        sig = p["diff_ci"][0] > 0 or p["diff_ci"][1] < 0
+        top = max(m[n].get("bacc_ci", [0, m[n]["bacc"]])[1] for n, _, _ in series)
+        ax.text(i, top + 0.03, f"{p['diff_bacc']:+.3f}" + (" *" if sig else ""), ha="center", fontsize=14,
+                fontweight="bold" if sig else "normal", color=ps.INK)
+        record("fig14f_ablation", f"paired ResNet-18 hybrid - embedding | {t}", p, V6 / "ablation.json")
+    ax.set_xticks(range(len(TASKS)), [SHORT[t] for t in TASKS], fontsize=13)
+    ax.set_ylim(0.4, 1.08); ax.set_ylabel("balanced accuracy (95% CI)"); ax.grid(axis="x", visible=False)
+    ax.set_title("What physics + ROM add on top of a frozen embedding (number = paired ResNet-18 difference, * = CI excludes 0)",
+                 loc="left", fontsize=15)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=4, fontsize=12.5)
+    save(fig, "fig14f_ablation.png")
 
 
 # ============================================================================ figure 15: paper vs ours
@@ -772,30 +805,30 @@ def fig_paper_vs_ours():
     def add(name, d, src):
         cols.append(name); data.append([d.get(m, np.nan) for m in metrics]); srcs.append(str(src))
 
-    add("OCTID multiclass\npaper reported", {"accuracy": pc["multiclass_accuracy"]["value"]}, V6 / "paper_claims.json")
-    add("OCTID multiclass\npaper method,\nhonest task", {k: bl["paper_cv_octid_dis750"][kk] for k, kk in
+    add("OCTID\n4-class\npaper\nreported", {"accuracy": pc["multiclass_accuracy"]["value"]}, V6 / "paper_claims.json")
+    add("OCTID\n3 dis.\npaper\nmethod", {k: bl["paper_cv_octid_dis750"][kk] for k, kk in
                                                          (("accuracy", "acc"), ("balanced acc", "bacc"), ("macro-F1", "macro_f1"))},
         V6 / "baselines.json")
     name, best = v6_best("OCTID CSR/DR/MH (500x750)")
     if best:
-        add("OCTID multiclass\nours, honest task", {"accuracy": best["acc"], "balanced acc": best["bacc"], "macro-F1": best["macro_f1"]},
+        add("OCTID\n3 dis.\nours", {"accuracy": best["acc"], "balanced acc": best["bacc"], "macro-F1": best["macro_f1"]},
             V6 / f"oof_octid_dis750_{model_slug(name)}.csv")
     v = pc["normal_triage_precision_recall"]["value"]
-    add("NORMAL triage\npaper reported\n(OCTID)", {"NORMAL recall": v, "NORMAL precision": v}, V6 / "paper_claims.json")
+    add("Triage\npaper\nreported", {"NORMAL recall": v, "NORMAL precision": v}, V6 / "paper_claims.json")
     o = oof(V6 / "oof_octid_4_confounded_paper_rf_8020.csv")
     if o is not None:
-        add("NORMAL triage\npaper method\n(OCTID, confounded)", triage_metrics(o), V6 / "oof_octid_4_confounded_paper_rf_8020.csv")
+        add("Triage\npaper\nmethod", triage_metrics(o), V6 / "oof_octid_4_confounded_paper_rf_8020.csv")
     for t, lab in (("OCTDL 7-class", "OCTDL"), ("Kermany 4-class", "Kermany")):
         name, _ = v6_best(t)
         o = oof(V6 / f"oof_{SLUG[t]}_{model_slug(name)}.csv") if name else None
         if o is not None:
-            add(f"NORMAL triage\nours, one scanner\n({lab})", triage_metrics(o), V6 / f"oof_{SLUG[t]}_{model_slug(name)}.csv")
+            add(f"Triage\nours\n{lab}", triage_metrics(o), V6 / f"oof_{SLUG[t]}_{model_slug(name)}.csv")
     M = np.array(data, float).T
-    fig, ax = plt.subplots(figsize=(20, 7.8))
-    heat(ax, M, metrics, cols, fmt="{:.2f}", vmin=0.3, vmax=1.0, fs=14)
+    fig, ax = plt.subplots(figsize=(13.2, 6.0))   # placed on a slide at ~0.86 scale: 17-19 pt here -> >= 14.5 pt there
+    heat(ax, M, metrics, cols, fmt="{:.2f}", vmin=0.3, vmax=1.0, fs=19)
     ax.xaxis.tick_top()
-    plt.setp(ax.get_xticklabels(), fontsize=12)
-    ax.set_title("Paper as reported vs re-evaluated honestly vs ours (n/a = not reported / not applicable)", loc="left", pad=95)
+    plt.setp(ax.get_xticklabels(), fontsize=17)
+    plt.setp(ax.get_yticklabels(), fontsize=18)
     fig.tight_layout()
     for c, d, s in zip(cols, data, srcs):
         record("fig15a_paper_vs_ours", c.replace("\n", " "), dict(zip(metrics, [None if not np.isfinite(x) else x for x in d])), s)
@@ -864,7 +897,7 @@ def main():
     FIG.mkdir(parents=True, exist_ok=True)
     style()
     steps = [fig_pipeline, fig_examples, fig_concepts, fig_confound, fig_confusions, fig_where, fig_fractal, fig_mapod,
-             fig_rom, None, fig_conformal, fig_harmonise, None, fig_v6, fig_paper_vs_ours]
+             fig_rom, None, fig_conformal, fig_harmonise, None, fig_v6, fig_ablation, fig_paper_vs_ours]
     rows = None
     for f in steps:
         if f is None:

@@ -92,11 +92,11 @@
    "source": "results/v6/oof_octdl_7_hybrid_resnet_18.csv"
   },
   "(e) balanced acc": {
-   "value": 0.7375486176367018,
-   "source": "results/v6/oof_kermany_4_hybrid_dinov2_s.csv"
+   "value": 0.7266881810334036,
+   "source": "results/v6/oof_kermany_4_hybrid_resnet_18.csv"
   },
   "(f) balanced acc": {
-   "value": 0.7294115758002638,
+   "value": 0.7530534889548525,
    "source": "results/v6/cross.json"
   }
  },
@@ -214,94 +214,94 @@
  "fig11_conformal": {
   "OCTDL triage NORMAL vs ABNORMAL alpha=0.05 coverage": {
    "value": {
-    "ABNORMAL": 0.9509237875288683,
+    "ABNORMAL": 0.9448614318706698,
     "NORMAL": 0.9608433734939759
    },
    "source": "results/v6/conformal.json"
   },
   "OCTDL triage NORMAL vs ABNORMAL alpha=0.05 set size": {
-   "value": 1.062015503875969,
+   "value": 1.0438468992248062,
    "source": "results/v6/conformal.json"
   },
   "OCTDL triage NORMAL vs ABNORMAL alpha=0.1 coverage": {
    "value": {
-    "ABNORMAL": 0.9009815242494226,
-    "NORMAL": 0.9141566265060241
+    "ABNORMAL": 0.891743648960739,
+    "NORMAL": 0.9186746987951807
    },
    "source": "results/v6/conformal.json"
   },
   "OCTDL triage NORMAL vs ABNORMAL alpha=0.1 set size": {
-   "value": 0.967296511627907,
+   "value": 0.9551841085271318,
    "source": "results/v6/conformal.json"
   },
   "Kermany triage NORMAL vs ABNORMAL alpha=0.05 coverage": {
    "value": {
-    "ABNORMAL": 0.9419121734296831,
-    "NORMAL": 0.9377076411960132
+    "ABNORMAL": 0.9408004446914953,
+    "NORMAL": 0.9426910299003322
    },
    "source": "results/v6/conformal.json"
   },
   "Kermany triage NORMAL vs ABNORMAL alpha=0.05 set size": {
-   "value": 1.1793002915451893,
+   "value": 1.172844648063307,
    "source": "results/v6/conformal.json"
   },
   "Kermany triage NORMAL vs ABNORMAL alpha=0.1 coverage": {
    "value": {
-    "ABNORMAL": 0.8913285158421345,
-    "NORMAL": 0.8887043189368771
+    "ABNORMAL": 0.8888271261812117,
+    "NORMAL": 0.893687707641196
    },
    "source": "results/v6/conformal.json"
   },
   "Kermany triage NORMAL vs ABNORMAL alpha=0.1 set size": {
-   "value": 1.0370678883798417,
+   "value": 1.0428987921699293,
    "source": "results/v6/conformal.json"
   },
   "OCTID CSR/DR/MH (500x750) alpha=0.05 coverage": {
    "value": {
     "CSR": 1.0,
-    "DR": 0.9607843137254901,
-    "MH": 0.9313725490196079
+    "DR": 0.9754901960784313,
+    "MH": 0.9362745098039216
    },
    "source": "results/v6/conformal.json"
   },
   "OCTID CSR/DR/MH (500x750) alpha=0.05 set size": {
-   "value": 2.0294117647058822,
+   "value": 2.0128676470588234,
    "source": "results/v6/conformal.json"
   },
   "OCTID CSR/DR/MH (500x750) alpha=0.1 coverage": {
    "value": {
-    "CSR": 0.9264705882352942,
-    "DR": 0.9362745098039216,
-    "MH": 0.8627450980392157
+    "CSR": 0.8970588235294118,
+    "DR": 0.9509803921568627,
+    "MH": 0.8872549019607843
    },
    "source": "results/v6/conformal.json"
   },
   "OCTID CSR/DR/MH (500x750) alpha=0.1 set size": {
-   "value": 1.1084558823529411,
+   "value": 1.1360294117647058,
    "source": "results/v6/conformal.json"
   },
   "Kermany CNV/DME/DRUSEN alpha=0.05 coverage": {
    "value": {
-    "CNV": 0.9467554076539102,
-    "DME": 0.955685618729097,
-    "DRUSEN": 0.9466666666666667
+    "CNV": 0.9517470881863561,
+    "DME": 0.9515050167224081,
+    "DRUSEN": 0.9516666666666667
    },
    "source": "results/v6/conformal.json"
   },
   "Kermany CNV/DME/DRUSEN alpha=0.05 set size": {
-   "value": 1.7498610339077265,
+   "value": 1.780989438576987,
    "source": "results/v6/conformal.json"
   },
   "Kermany CNV/DME/DRUSEN alpha=0.1 coverage": {
    "value": {
-    "CNV": 0.9051580698835274,
-    "DME": 0.899665551839465,
-    "DRUSEN": 0.9
+    "CNV": 0.9026622296173045,
+    "DME": 0.8988294314381271,
+    "DRUSEN": 0.8975
    },
    "source": "results/v6/conformal.json"
   },
   "Kermany CNV/DME/DRUSEN alpha=0.1 set size": {
-   "value": 1.4688715953307394,
+   "value": 1.4410783768760422,
    "source": "results/v6/conformal.json"
   }
  },
@@ -350,6 +350,22 @@
   },
   "v5 best (soft vote) | healthy-ref k=30 | TTA": {
    "value": 0.705257017225717,
+   "source": "results/v6/cross.json"
+  },
+  "v6 hybrid (ResNet-18 + physics) | none | no TTA": {
+   "value": 0.7530534889548525,
+   "source": "results/v6/cross.json"
+  },
+  "v6 hybrid (ResNet-18 + physics) | none | TTA": {
+   "value": 0.7526274575026622,
+   "source": "results/v6/cross.json"
+  },
+  "v6 hybrid (ResNet-18 + physics) | healthy-ref k=30 | no TTA": {
+   "value": 0.7301229755812976,
+   "source": "results/v6/cross.json"
+  },
+  "v6 hybrid (ResNet-18 + physics) | healthy-ref k=30 | TTA": {
+   "value": 0.7521708312232149,
    "source": "results/v6/cross.json"
   },
   "v6 hybrid (DINOv2-S + physics) | none | no TTA": {
@@ -462,28 +478,28 @@
    "value": 0.7093056487958832,
    "source": "results/v6/image_pod_kermany_to_octdl.json"
   },
-  "hybrid DINOv2-S | OCTID CSR/DR/MH (500x750)": {
-   "value": 0.8986928104575164,
+  "hybrid ResNet-18 | OCTID CSR/DR/MH (500x750)": {
+   "value": 0.9035947712418301,
    "source": "results/v6/hybrid_octid_dis750.json"
   },
-  "hybrid DINOv2-S | OCTDL 7-class": {
-   "value": 0.6881057451584148,
+  "hybrid ResNet-18 | OCTDL 7-class": {
+   "value": 0.708087112733908,
    "source": "results/v6/hybrid_octdl_7.json"
   },
-  "hybrid DINOv2-S | OCTDL 6 diseases": {
-   "value": 0.6694319185238856,
+  "hybrid ResNet-18 | OCTDL 6 diseases": {
+   "value": 0.6821230294287095,
    "source": "results/v6/hybrid_octdl_6dis.json"
   },
-  "hybrid DINOv2-S | Kermany 4-class": {
-   "value": 0.7342064778591005,
+  "hybrid ResNet-18 | Kermany 4-class": {
+   "value": 0.7304370193326711,
    "source": "results/v6/hybrid_kermany_4.json"
   },
-  "hybrid DINOv2-S | Kermany CNV/DME/DRUSEN": {
-   "value": 0.7634220330993826,
+  "hybrid ResNet-18 | Kermany CNV/DME/DRUSEN": {
+   "value": 0.758984392213069,
    "source": "results/v6/hybrid_kermany_3dis.json"
   },
-  "hybrid DINOv2-S | Kermany -> OCTDL (NORMAL/DME/AMD)": {
-   "value": 0.7289129883371303,
+  "hybrid ResNet-18 | Kermany -> OCTDL (NORMAL/DME/AMD)": {
+   "value": 0.7530534889548525,
    "source": "results/v6/hybrid_kermany_to_octdl.json"
   },
   "CNN | OCTID CSR/DR/MH (500x750)": {
@@ -499,8 +515,172 @@
    "source": "results/v6/cnn_kermany_to_octdl.json"
   }
  },
+ "fig14f_ablation": {
+  "ResNet-18 embedding only | OCTID CSR/DR/MH (500x750)": {
+   "value": 0.9079520697167757,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid ResNet-18 | OCTID CSR/DR/MH (500x750)": {
+   "value": 0.9035947712418301,
+   "source": "results/v6/ablation.json"
+  },
+  "DINOv2-S embedding only | OCTID CSR/DR/MH (500x750)": {
+   "value": 0.8654684095860566,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid DINOv2-S | OCTID CSR/DR/MH (500x750)": {
+   "value": 0.8986928104575164,
+   "source": "results/v6/ablation.json"
+  },
+  "paired ResNet-18 hybrid - embedding | OCTID CSR/DR/MH (500x750)": {
+   "value": {
+    "diff_bacc": -0.017973856209150263,
+    "diff_ci": [
+     -0.06236828898786129,
+     0.024471644091324046
+    ],
+    "p_one_sided": 0.779
+   },
+   "source": "results/v6/ablation.json"
+  },
+  "ResNet-18 embedding only | OCTDL 7-class": {
+   "value": 0.6705877324850471,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid ResNet-18 | OCTDL 7-class": {
+   "value": 0.708087112733908,
+   "source": "results/v6/ablation.json"
+  },
+  "DINOv2-S embedding only | OCTDL 7-class": {
+   "value": 0.6002081467024273,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid DINOv2-S | OCTDL 7-class": {
+   "value": 0.6881057451584148,
+   "source": "results/v6/ablation.json"
+  },
+  "paired ResNet-18 hybrid - embedding | OCTDL 7-class": {
+   "value": {
+    "diff_bacc": 0.05088240904437935,
+    "diff_ci": [
+     0.018020484675469406,
+     0.0956901535616991
+    ],
+    "p_one_sided": 0.002
+   },
+   "source": "results/v6/ablation.json"
+  },
+  "ResNet-18 embedding only | OCTDL 6 diseases": {
+   "value": 0.6494809497348543,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid ResNet-18 | OCTDL 6 diseases": {
+   "value": 0.6821230294287095,
+   "source": "results/v6/ablation.json"
+  },
+  "DINOv2-S embedding only | OCTDL 6 diseases": {
+   "value": 0.5814395583718144,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid DINOv2-S | OCTDL 6 diseases": {
+   "value": 0.6694319185238856,
+   "source": "results/v6/ablation.json"
+  },
+  "paired ResNet-18 hybrid - embedding | OCTDL 6 diseases": {
+   "value": {
+    "diff_bacc": 0.03509862716879342,
+    "diff_ci": [
+     -0.004099372859626552,
+     0.07713019552056248
+    ],
+    "p_one_sided": 0.04
+   },
+   "source": "results/v6/ablation.json"
+  },
+  "ResNet-18 embedding only | Kermany 4-class": {
+   "value": 0.6945545599656229,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid ResNet-18 | Kermany 4-class": {
+   "value": 0.7304370193326711,
+   "source": "results/v6/ablation.json"
+  },
+  "DINOv2-S embedding only | Kermany 4-class": {
+   "value": 0.6829251301653193,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid DINOv2-S | Kermany 4-class": {
+   "value": 0.7342064778591005,
+   "source": "results/v6/ablation.json"
+  },
+  "paired ResNet-18 hybrid - embedding | Kermany 4-class": {
+   "value": {
+    "diff_bacc": 0.03379613491052713,
+    "diff_ci": [
+     0.014341894990639394,
+     0.05347278951366617
+    ],
+    "p_one_sided": 0.0005
+   },
+   "source": "results/v6/ablation.json"
+  },
+  "ResNet-18 embedding only | Kermany CNV/DME/DRUSEN": {
+   "value": 0.7178001856190382,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid ResNet-18 | Kermany CNV/DME/DRUSEN": {
+   "value": 0.758984392213069,
+   "source": "results/v6/ablation.json"
+  },
+  "DINOv2-S embedding only | Kermany CNV/DME/DRUSEN": {
+   "value": 0.721895896698038,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid DINOv2-S | Kermany CNV/DME/DRUSEN": {
+   "value": 0.7634220330993826,
+   "source": "results/v6/ablation.json"
+  },
+  "paired ResNet-18 hybrid - embedding | Kermany CNV/DME/DRUSEN": {
+   "value": {
+    "diff_bacc": 0.03616130615949764,
+    "diff_ci": [
+     0.012823068515048495,
+     0.05940021472124517
+    ],
+    "p_one_sided": 0.0015
+   },
+   "source": "results/v6/ablation.json"
+  },
+  "ResNet-18 embedding only | Kermany -> OCTDL (NORMAL/DME/AMD)": {
+   "value": 0.7371568592267798,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid ResNet-18 | Kermany -> OCTDL (NORMAL/DME/AMD)": {
+   "value": 0.7530534889548525,
+   "source": "results/v6/ablation.json"
+  },
+  "DINOv2-S embedding only | Kermany -> OCTDL (NORMAL/DME/AMD)": {
+   "value": 0.6826821479899383,
+   "source": "results/v6/ablation.json"
+  },
+  "hybrid DINOv2-S | Kermany -> OCTDL (NORMAL/DME/AMD)": {
+   "value": 0.7289129883371303,
+   "source": "results/v6/ablation.json"
+  },
+  "paired ResNet-18 hybrid - embedding | Kermany -> OCTDL (NORMAL/DME/AMD)": {
+   "value": {
+    "diff_bacc": 0.01589662972807271,
+    "diff_ci": [
+     -0.024311146104471396,
+     0.05723307873655823
+    ],
+    "p_one_sided": 0.2205
+   },
+   "source": "results/v6/ablation.json"
+  }
+ },
  "fig15a_paper_vs_ours": {
-  "OCTID multiclass paper reported": {
+  "OCTID 4-class paper reported": {
    "value": {
     "accuracy": 0.71,
     "balanced acc": null,
@@ -511,7 +691,7 @@
    },
    "source": "results/v6/paper_claims.json"
   },
-  "OCTID multiclass paper method, honest task": {
+  "OCTID 3 dis. paper method honest": {
    "value": {
     "accuracy": 0.5012254901960785,
     "balanced acc": 0.5021786492374727,
@@ -522,7 +702,7 @@
    },
    "source": "results/v6/baselines.json"
   },
-  "OCTID multiclass ours, honest task": {
+  "OCTID 3 dis. ours (hybrid)": {
    "value": {
     "accuracy": 0.9007352941176471,
     "balanced acc": 0.9035947712418301,
@@ -533,7 +713,7 @@
    },
    "source": "results/v6/oof_octid_dis750_hybrid_resnet_18.csv"
   },
-  "NORMAL triage paper reported (OCTID)": {
+  "Triage paper reported": {
    "value": {
     "accuracy": null,
     "balanced acc": null,
@@ -544,7 +724,7 @@
    },
    "source": "results/v6/paper_claims.json"
   },
-  "NORMAL triage paper method (OCTID, confounded)": {
+  "Triage paper method (confounded)": {
    "value": {
     "accuracy": null,
     "balanced acc": 1.0,
@@ -555,7 +735,7 @@
    },
    "source": "results/v6/oof_octid_4_confounded_paper_rf_8020.csv"
   },
-  "NORMAL triage ours, one scanner (OCTDL)": {
+  "Triage ours (OCTDL)": {
    "value": {
     "accuracy": null,
     "balanced acc": 0.9362809204485378,
@@ -566,16 +746,16 @@
    },
    "source": "results/v6/oof_octdl_7_hybrid_resnet_18.csv"
   },
-  "NORMAL triage ours, one scanner (Kermany)": {
+  "Triage ours (Kermany)": {
    "value": {
     "accuracy": null,
-    "balanced acc": 0.8672098194087154,
+    "balanced acc": 0.8655260674534948,
     "macro-F1": null,
-    "NORMAL recall": 0.8255813953488372,
-    "NORMAL precision": 0.7518910741301059,
-    "ABNORMAL recall": 0.9088382434685937
+    "NORMAL recall": 0.8338870431893688,
+    "NORMAL precision": 0.7307132459970888,
+    "ABNORMAL recall": 0.8971650917176209
    },
-   "source": "results/v6/oof_kermany_4_hybrid_dinov2_s.csv"
+   "source": "results/v6/oof_kermany_4_hybrid_resnet_18.csv"
   }
  },
  "fig10_model_task": {
@@ -755,28 +935,100 @@
    "value": 0.9254482687570965,
    "source": "results/v6/cnn_kermany_to_octdl.json"
   },
-  "v6 hybrid | OCTID CSR/DR/MH (500x750)": {
+  "ResNet-18 emb. only | OCTID CSR/DR/MH (500x750)": {
+   "value": 0.9079520697167757,
+   "source": "results/v6/hybrid_octid_dis750.json"
+  },
+  "ResNet-18 emb. only | OCTDL 7-class": {
+   "value": 0.6705877324850471,
+   "source": "results/v6/hybrid_octdl_7.json"
+  },
+  "ResNet-18 emb. only | OCTDL 6 diseases": {
+   "value": 0.6494809497348543,
+   "source": "results/v6/hybrid_octdl_6dis.json"
+  },
+  "ResNet-18 emb. only | Kermany 4-class": {
+   "value": 0.6945545599656229,
+   "source": "results/v6/hybrid_kermany_4.json"
+  },
+  "ResNet-18 emb. only | Kermany CNV/DME/DRUSEN": {
+   "value": 0.7178001856190382,
+   "source": "results/v6/hybrid_kermany_3dis.json"
+  },
+  "ResNet-18 emb. only | Kermany -> OCTDL (NORMAL/DME/AMD)": {
+   "value": 0.7371568592267798,
+   "source": "results/v6/hybrid_kermany_to_octdl.json"
+  },
+  "DINOv2-S emb. only | OCTID CSR/DR/MH (500x750)": {
+   "value": 0.8654684095860566,
+   "source": "results/v6/hybrid_octid_dis750.json"
+  },
+  "DINOv2-S emb. only | OCTDL 7-class": {
+   "value": 0.6002081467024273,
+   "source": "results/v6/hybrid_octdl_7.json"
+  },
+  "DINOv2-S emb. only | OCTDL 6 diseases": {
+   "value": 0.5814395583718144,
+   "source": "results/v6/hybrid_octdl_6dis.json"
+  },
+  "DINOv2-S emb. only | Kermany 4-class": {
+   "value": 0.6829251301653193,
+   "source": "results/v6/hybrid_kermany_4.json"
+  },
+  "DINOv2-S emb. only | Kermany CNV/DME/DRUSEN": {
+   "value": 0.721895896698038,
+   "source": "results/v6/hybrid_kermany_3dis.json"
+  },
+  "DINOv2-S emb. only | Kermany -> OCTDL (NORMAL/DME/AMD)": {
+   "value": 0.6826821479899383,
+   "source": "results/v6/hybrid_kermany_to_octdl.json"
+  },
+  "v6 hybrid DINOv2-S | OCTID CSR/DR/MH (500x750)": {
    "value": 0.8986928104575164,
    "source": "results/v6/hybrid_octid_dis750.json"
   },
-  "v6 hybrid | OCTDL 7-class": {
+  "v6 hybrid DINOv2-S | OCTDL 7-class": {
    "value": 0.6881057451584148,
    "source": "results/v6/hybrid_octdl_7.json"
   },
-  "v6 hybrid | OCTDL 6 diseases": {
+  "v6 hybrid DINOv2-S | OCTDL 6 diseases": {
    "value": 0.6694319185238856,
    "source": "results/v6/hybrid_octdl_6dis.json"
   },
-  "v6 hybrid | Kermany 4-class": {
+  "v6 hybrid DINOv2-S | Kermany 4-class": {
    "value": 0.7342064778591005,
    "source": "results/v6/hybrid_kermany_4.json"
   },
-  "v6 hybrid | Kermany CNV/DME/DRUSEN": {
+  "v6 hybrid DINOv2-S | Kermany CNV/DME/DRUSEN": {
    "value": 0.7634220330993826,
    "source": "results/v6/hybrid_kermany_3dis.json"
   },
-  "v6 hybrid | Kermany -> OCTDL (NORMAL/DME/AMD)": {
+  "v6 hybrid DINOv2-S | Kermany -> OCTDL (NORMAL/DME/AMD)": {
    "value": 0.7289129883371303,
+   "source": "results/v6/hybrid_kermany_to_octdl.json"
+  },
+  "v6 hybrid ResNet-18 | OCTID CSR/DR/MH (500x750)": {
+   "value": 0.9035947712418301,
+   "source": "results/v6/hybrid_octid_dis750.json"
+  },
+  "v6 hybrid ResNet-18 | OCTDL 7-class": {
+   "value": 0.708087112733908,
+   "source": "results/v6/hybrid_octdl_7.json"
+  },
+  "v6 hybrid ResNet-18 | OCTDL 6 diseases": {
+   "value": 0.6821230294287095,
+   "source": "results/v6/hybrid_octdl_6dis.json"
+  },
+  "v6 hybrid ResNet-18 | Kermany 4-class": {
+   "value": 0.7304370193326711,
+   "source": "results/v6/hybrid_kermany_4.json"
+  },
+  "v6 hybrid ResNet-18 | Kermany CNV/DME/DRUSEN": {
+   "value": 0.758984392213069,
+   "source": "results/v6/hybrid_kermany_3dis.json"
+  },
+  "v6 hybrid ResNet-18 | Kermany -> OCTDL (NORMAL/DME/AMD)": {
+   "value": 0.7530534889548525,
    "source": "results/v6/hybrid_kermany_to_octdl.json"
   }
  }

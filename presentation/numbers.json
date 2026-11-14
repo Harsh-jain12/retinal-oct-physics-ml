@@ -367,50 +367,56 @@
  },
  {
   "slide": 19,
-  "label": "our best OCTID CSR/DR/MH",
+  "label": "headline hybrid ResNet-18 OCTID CSR/DR/MH",
   "value": 0.9035947712418301,
-  "source": "results/v6"
+  "source": "results/v6/hybrid_octid_dis750.json"
  },
  {
   "slide": 19,
-  "label": "our best OCTDL 7-class",
+  "label": "headline hybrid ResNet-18 OCTDL 7-class",
   "value": 0.708087112733908,
-  "source": "results/v6"
+  "source": "results/v6/hybrid_octdl_7.json"
  },
  {
   "slide": 19,
-  "label": "our best Kermany 4-class",
-  "value": 0.7342064778591005,
-  "source": "results/v6"
+  "label": "headline hybrid ResNet-18 Kermany 4-class",
+  "value": 0.7304370193326711,
+  "source": "results/v6/hybrid_kermany_4.json"
  },
  {
   "slide": 20,
   "label": "OCTDL triage ABNORMAL coverage alpha 0.05",
-  "value": 0.9509237875288683,
+  "value": 0.9448614318706698,
   "source": "results/v6/conformal.json"
  },
  {
   "slide": 20,
   "label": "OCTDL triage mean set size alpha 0.05",
-  "value": 1.062015503875969,
+  "value": 1.0438468992248062,
   "source": "results/v6/conformal.json"
  },
  {
   "slide": 20,
   "label": "OCTDL triage singleton accuracy alpha 0.05",
-  "value": 0.9505338038205586,
+  "value": 0.9470553787792415,
   "source": "results/v6/conformal.json"
+ },
+ {
+  "slide": 20,
+  "label": "binomial SE of coverage at 0.95 (OCTDL abnormal eyes)",
+  "value": 0.005236882876605075,
+  "source": "results/v4/octdl_features.csv"
  },
  {
   "slide": 21,
   "label": "cross-scanner best config balanced accuracy",
-  "value": 0.7294115758002638,
+  "value": 0.7530534889548525,
   "source": "results/v6/cross.json"
  },
  {
   "slide": 21,
   "label": "cross-scanner best config DME recall",
-  "value": 0.6259,
+  "value": 0.619,
   "source": "results/v6/cross.json"
  },
  {
@@ -451,9 +457,9 @@
  },
  {
   "slide": 23,
-  "label": "v6 hybrid OCTID",
-  "value": 0.8986928104575164,
-  "source": "results/v6/hybrid_octid_dis750.json"
+  "label": "headline hybrid ResNet-18 OCTID",
+  "value": 0.9035947712418301,
+  "source": "results/v6/ablation.json"
  },
  {
   "slide": 23,
@@ -463,72 +469,198 @@
  },
  {
   "slide": 23,
-  "label": "hybrid minus CNN OCTID",
+  "label": "hybrid ResNet-18 - CNN OCTID diff",
   "value": -0.035947712418300526,
-  "source": "results/v6/hybrid_octid_dis750.json"
+  "source": "results/v6/ablation.json"
  },
  {
   "slide": 23,
-  "label": "hybrid-CNN CI lo",
-  "value": -0.07766860832118677,
-  "source": "results/v6/hybrid_octid_dis750.json"
+  "label": "hybrid ResNet-18 - CNN OCTID CI lo",
+  "value": -0.07624756755709115,
+  "source": "results/v6/ablation.json"
  },
  {
   "slide": 23,
-  "label": "hybrid-CNN CI hi",
-  "value": 0.004188266909726992,
-  "source": "results/v6/hybrid_octid_dis750.json"
+  "label": "hybrid ResNet-18 - CNN OCTID CI hi",
+  "value": 0.002830552037369242,
+  "source": "results/v6/ablation.json"
  },
  {
   "slide": 23,
-  "label": "physics groups in hybrid top-5",
-  "value": 4,
-  "source": "results/v6/hybrid_importance.json"
+  "label": "hybrid ResNet-18 - CNN Kermany 4-class diff",
+  "value": -0.1408112882325918,
+  "source": "results/v6/ablation.json"
  },
  {
   "slide": 23,
-  "label": "rank of best physics group",
-  "value": 1,
-  "source": "results/v6/hybrid_importance.json"
+  "label": "hybrid ResNet-18 - CNN Kermany 4-class CI lo",
+  "value": -0.1623160858170153,
+  "source": "results/v6/ablation.json"
  },
  {
   "slide": 23,
-  "label": "Grad-CAM vs physics Spearman",
-  "value": -0.22377622377622378,
-  "source": "results/v6/gradcam_octid_dis750.json"
+  "label": "hybrid ResNet-18 - CNN Kermany 4-class CI hi",
+  "value": -0.1196183760344031,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 23,
+  "label": "hybrid ResNet-18 - CNN new scanner diff",
+  "value": -0.17239477980224405,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 23,
+  "label": "hybrid ResNet-18 - CNN new scanner CI lo",
+  "value": -0.20576188098331785,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 23,
+  "label": "hybrid ResNet-18 - CNN new scanner CI hi",
+  "value": -0.13764446084327012,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 23,
+  "label": "hybrid ResNet-18 - v5 OCTID",
+  "value": 0.02450980392156865,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 23,
+  "label": "hybrid ResNet-18 - v5 OCTDL 7-class",
+  "value": 0.04487100867644078,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 23,
+  "label": "hybrid ResNet-18 - v5 OCTDL 6-disease",
+  "value": 0.02763729170987783,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 23,
+  "label": "hybrid ResNet-18 - v5 Kermany 4-class",
+  "value": 0.03207522001369123,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 23,
+  "label": "hybrid ResNet-18 - v5 Kermany 3-disease",
+  "value": 0.02723530273772623,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 23,
+  "label": "hybrid ResNet-18 - v5 new scanner",
+  "value": 0.043747840158969264,
+  "source": "results/v6/ablation.json"
  },
  {
   "slide": 24,
+  "label": "physics gain min (OCTDL, Kermany)",
+  "value": 0.03264207969385524,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 24,
+  "label": "physics gain max (OCTDL, Kermany)",
+  "value": 0.04118420659403077,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 24,
+  "label": "physics gain OCTID",
+  "value": -0.004357298474945592,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 24,
+  "label": "paired hybrid - embedding ResNet-18 OCTID",
+  "value": -0.017973856209150263,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 24,
+  "label": "paired hybrid - embedding ResNet-18 OCTDL 7-class",
+  "value": 0.05088240904437935,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 24,
+  "label": "paired hybrid - embedding ResNet-18 OCTDL 6-disease",
+  "value": 0.03509862716879342,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 24,
+  "label": "paired hybrid - embedding ResNet-18 Kermany 4-class",
+  "value": 0.03379613491052713,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 24,
+  "label": "paired hybrid - embedding ResNet-18 Kermany 3-disease",
+  "value": 0.03616130615949764,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 24,
+  "label": "paired hybrid - embedding ResNet-18 new scanner",
+  "value": 0.01589662972807271,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 24,
+  "label": "DINOv2 physics gain min",
+  "value": 0.033224400871459725,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 24,
+  "label": "DINOv2 physics gain max",
+  "value": 0.08799236015207124,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 25,
+  "label": "headline hybrid OCTID (heat map)",
+  "value": 0.9035947712418301,
+  "source": "results/v6/ablation.json"
+ },
+ {
+  "slide": 26,
   "label": "claim: Multiclass accuracy 71% on 104 test scans",
   "value": "holds",
   "source": "presentation/figures/claims.json"
  },
  {
-  "slide": 24,
+  "slide": 26,
   "label": "claim: NORMAL triage precision/recall 1.00, 'mathematical",
   "value": "does not hold as stated",
   "source": "presentation/figures/claims.json"
  },
  {
-  "slide": 24,
+  "slide": 26,
   "label": "claim: Top-15 features are 100% Hurst, in rows 7\u20138: 'auto",
   "value": "partly position",
   "source": "presentation/figures/claims.json"
  },
  {
-  "slide": 24,
+  "slide": 26,
   "label": "claim: Shannon entropy discarded because collinear with H",
   "value": "does not hold",
   "source": "presentation/figures/claims.json"
  },
  {
-  "slide": 24,
+  "slide": 26,
   "label": "claim: KT-1 and Hurst carry diagnostic signal",
   "value": "holds (in anatomy)",
   "source": "presentation/figures/claims.json"
  },
  {
-  "slide": 24,
+  "slide": 26,
   "label": "claim: Physics engine is explainable where black boxes ar",
   "value": "holds, at a cost",
   "source": "presentation/figures/claims.json"

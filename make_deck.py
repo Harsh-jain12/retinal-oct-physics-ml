@@ -24,6 +24,10 @@ R, V6, FIG = Path("results"), Path("results/v6"), Path("presentation/figures")
 OUT = Path("presentation/Retinal_OCT_Physics_ML.pptx")
 TEAM = ["Dhvani Shah", "Tapnanshu Gandhi", "Tanushka Sonde", "Rathod Sai Tejashwini"]
 FOOTER = "IIT Gandhinagar · NDT course project"
+INSTRUCTOR = "Prof. Prabhat Munshi"
+SHORTT = {"OCTID CSR/DR/MH (500x750)": "OCTID", "OCTDL 7-class": "OCTDL 7-class", "OCTDL 6 diseases": "OCTDL 6-disease",
+          "Kermany 4-class": "Kermany 4-class", "Kermany CNV/DME/DRUSEN": "Kermany 3-disease",
+          "Kermany -> OCTDL (NORMAL/DME/AMD)": "new scanner"}
 ACCENT = RGBColor(0x1C, 0x5C, 0xAB)
 INK, INK2, TINT = RGBColor(0x0B, 0x0B, 0x0B), RGBColor(0x52, 0x51, 0x4E), RGBColor(0xE8, 0xF0, 0xFB)
 HEAD, BODY = "Cambria", "Calibri"
@@ -193,6 +197,7 @@ def load():
     D["ip"] = {t: mf.js(V6 / f"image_pod_{mf.SLUG[t]}.json") for t in mf.TASKS}
     D["hy"] = {t: mf.js(V6 / f"hybrid_{mf.SLUG[t]}.json") for t in mf.TASKS}
     D["cnn"] = {t: mf.cnn(t) for t in mf.TASKS}
+    D["ab"] = mf.js(V6 / "ablation.json")
     return D
 
 
@@ -219,7 +224,8 @@ def build():
          "A Deterministic Physics-Based Engine for Tomographic Classification” (Banerjee, Sarkar & Munshi)",
          size=18, color=INK2)
     text(s, 0.8, 4.45, 11.7, 0.5, " · ".join(TEAM), size=20, bold=True, color=ACCENT)
-    text(s, 0.8, 5.0, 11.7, 0.9, ["Non-destructive testing (NDT) course project, IIT Gandhinagar",
+    text(s, 0.8, 5.0, 11.7, 1.3, ["Course instructor: " + INSTRUCTOR,
+                                  "Non-destructive testing (NDT) course project, IIT Gandhinagar",
                                   date.today().strftime("%d %B %Y")], size=16, color=INK2)
     footer(s)
     notes(s, "Good morning. We are presenting our NDT course project. We took a recent IIT Gandhinagar paper that classifies "
@@ -432,7 +438,7 @@ def build():
                 [("23 disease numbers", {"bold": True}), ": thickness, foveal dip, full-thickness gap, fluid, RPE bumps"],
                 [("Carries over", {"bold": True}), f": Kermany 4-class {vk}, OCTDL 7-class {vo} (paper method < 0.5)"]],
             9.1, 1.5, 3.7, 5.2, size=16)
-    text(s, 0.55, 5.75, 8.3, 1.0, "Left: paper method. Right: our best model on the same task and folds (confusion counts in brackets).",
+    text(s, 0.55, 5.75, 8.3, 1.0, "Left: paper method. Right: the headline v6 hybrid (ResNet-18) on the same task and folds (counts in brackets).",
          size=13, color=INK2)
     footer(s)
     notes(s, f"This is the biggest single step in the project. Version two measures the same kind of physics, roughness, "
@@ -594,18 +600,18 @@ def build():
     # ---------------------------------------------------------------- 19 confusion
     s = new_slide(prs)
     names = {t: mf.v6_best(t) for t in (OCT, "OCTDL 7-class", "Kermany 4-class")}
-    bo = n("our best OCTID CSR/DR/MH", names[OCT][1]["bacc"], V6)
-    bd = n("our best OCTDL 7-class", names["OCTDL 7-class"][1]["bacc"], V6)
-    bk = n("our best Kermany 4-class", names["Kermany 4-class"][1]["bacc"], V6)
-    title(s, f"Our best physics-based models: {bo} on OCTID diseases, {bd} on OCTDL's seven classes, {bk} on Kermany")
+    bo = n("headline hybrid ResNet-18 OCTID CSR/DR/MH", names[OCT][1]["bacc"], V6 / "hybrid_octid_dis750.json")
+    bd = n("headline hybrid ResNet-18 OCTDL 7-class", names["OCTDL 7-class"][1]["bacc"], V6 / "hybrid_octdl_7.json")
+    bk = n("headline hybrid ResNet-18 Kermany 4-class", names["Kermany 4-class"][1]["bacc"], V6 / "hybrid_kermany_4.json")
+    title(s, f"The headline v6 hybrid (ResNet-18 + physics) reaches {bo} on OCTID diseases, {bd} on OCTDL's seven classes, {bk} on Kermany")
     image(s, FIG / "fig05c_confusion.png", 0.4, 1.4, 4.1, 4.5)
     image(s, FIG / "fig05d_confusion.png", 4.6, 1.4, 4.3, 4.5)
     image(s, FIG / "fig05e_confusion.png", 9.0, 1.4, 4.0, 4.5)
-    bullets(s, [f"Rows are true classes, normalised to 1; diagonal = recall. Models: {names[OCT][0]}; {names['OCTDL 7-class'][0]}; {names['Kermany 4-class'][0]}",
+    bullets(s, ["Rows are true classes, normalised to 1; diagonal = recall. Model: frozen ResNet-18 features + physics + ROM → soft vote",
                 "OCTDL's small classes (RAO, RVO, VID) and Kermany's DRUSEN vs CNV remain the hardest"],
             0.55, 6.0, 12.2, 1.0, size=14)
     footer(s)
-    notes(s, f"These confusion matrices show where our best non-deep models still fail. Each row is a true class and is "
+    notes(s, f"These confusion matrices show where our headline model, the ResNet-18 hybrid, still fails. Each row is a true class and is "
              f"normalised so the diagonal is the recall of that class; the counts are in brackets. On the honest OCTID task "
              f"balanced accuracy is {bo}, and most remaining errors are diabetic retinopathy against macular hole. On OCTDL's "
              f"seven classes it is {bd}: age-related macular degeneration is easy, but the rare vascular occlusions and "
@@ -620,7 +626,13 @@ def build():
     cov = n("OCTDL triage ABNORMAL coverage alpha 0.05", tri["coverage_per_class"]["ABNORMAL"], cfs)
     ss = n("OCTDL triage mean set size alpha 0.05", tri["mean_set_size"], cfs, "{:.2f}")
     sa = n("OCTDL triage singleton accuracy alpha 0.05", tri["singleton_accuracy"], cfs)
-    title(s, f"Conformal prediction gives triage a real, stated guarantee: {cov} of diseased eyes kept at a 0.95 target")
+    tot_, _, cc_ = counts("octdl")
+    n_abn = tot_ - cc_.get("NORMAL", 0)
+    se = n("binomial SE of coverage at 0.95 (OCTDL abnormal eyes)", (0.95 * 0.05 / n_abn) ** 0.5, R / "v4/octdl_features.csv", "{:.3f}")
+    gap = 0.95 - tri["coverage_per_class"]["ABNORMAL"]
+    se_raw = (0.95 * 0.05 / n_abn) ** 0.5
+    title(s, f"Conformal prediction gives triage a stated guarantee: {cov} of diseased eyes kept for a 0.95 target"
+             + (f" (within one standard error, ±{se})" if 0 < gap <= se_raw else ""))
     image(s, FIG / "fig11_conformal.png", 5.2, 1.4, 7.6, 5.4)
     bullets(s, [[("Score", {"bold": True}), ": sᵢ = 1 − p̂(yᵢ | xᵢ) on held-out calibration patients"],
                 [("Threshold per class", {"bold": True}), ": q_k = the ⌈(n_k+1)(1−α)⌉-th smallest score of class k"],
@@ -694,76 +706,117 @@ def build():
              f"of about {ak} on Kermany, {ao} on OCTDL and {ax_} on the unseen scanner. The residual maps below show where "
              f"each scan departs from a healthy retina, which is an explainable picture.")
 
-    # ---------------------------------------------------------------- 23 hybrid vs CNN
+    # ---------------------------------------------------------------- 23 hybrid vs CNN (headline ResNet-18)
     s = new_slide(prs)
-    hy = D["hy"][OCT]
-    cn = D["cnn"][OCT]
-    if hy and cn and "hybrid DINOv2-S vs CNN (fine-tuned ResNet-18)" in hy.get("paired", {}):
-        hb = n("v6 hybrid OCTID", hy["models"]["hybrid DINOv2-S"]["bacc"], V6 / "hybrid_octid_dis750.json")
-        cbn = n("CNN OCTID", cn["bacc"], V6 / "cnn_octid_dis750.json")
-        pdc = hy["paired"]["hybrid DINOv2-S vs CNN (fine-tuned ResNet-18)"]
-        dd = n("hybrid minus CNN OCTID", pdc["diff_bacc"], V6 / "hybrid_octid_dis750.json", "{:+.3f}")
-        lo, hi_ = n("hybrid-CNN CI lo", pdc["diff_ci"][0], V6 / "hybrid_octid_dis750.json", "{:+.3f}"), n("hybrid-CNN CI hi", pdc["diff_ci"][1], V6 / "hybrid_octid_dis750.json", "{:+.3f}")
-        within = pdc["diff_ci"][0] <= 0 <= pdc["diff_ci"][1]
-        verdict = (f"not significantly different from the CNN (difference {dd}, CI [{lo}, {hi_}])" if within
-                   else f"still below the CNN (difference {dd}, CI [{lo}, {hi_}])")
-        title(s, f"The hybrid (frozen DINOv2 + physics) reaches {hb} vs the CNN's {cbn}: "
-                 + ("the gap is not significant, but the CI barely includes zero" if within else "still significantly below it"))
-    else:
-        verdict = "hybrid / CNN comparison not yet run"; hb = cbn = "n/a"
-        title(s, "The hybrid model combines frozen deep features with physics")
+    ab = D["ab"]["tasks"]
+    AB = V6 / "ablation.json"
+    HY = "hybrid ResNet-18"
+    hb = n("headline hybrid ResNet-18 OCTID", ab[OCT]["models"][HY]["bacc"], AB)
+    cbn = n("CNN OCTID", D["cnn"][OCT]["bacc"], V6 / "cnn_octid_dis750.json")
+    pcs = {t: ab[t]["paired"][f"{HY} vs CNN"] for t in (OCT, "Kermany 4-class", X)}
+    fmt_p = lambda lab, p_: (n(f"{lab} diff", p_["diff_bacc"], AB, "{:+.3f}") + " [" + n(f"{lab} CI lo", p_["diff_ci"][0], AB, "{:+.3f}")
+                            + ", " + n(f"{lab} CI hi", p_["diff_ci"][1], AB, "{:+.3f}") + "]")
+    vs_cnn = {t: fmt_p(f"hybrid ResNet-18 - CNN {SHORTT[t]}", p_) for t, p_ in pcs.items()}
+    within = pcs[OCT]["diff_ci"][0] <= 0 <= pcs[OCT]["diff_ci"][1]
+    title(s, f"The ResNet-18 hybrid reaches {hb} vs the CNN's {cbn} on OCTID; the CNN stays clearly ahead on Kermany and a new scanner")
+    sig, nsig = [], []
+    for t in list(mf.TASKS):
+        p_ = ab[t]["paired"][f"{HY} vs v5 best (soft vote)"]
+        n(f"hybrid ResNet-18 - v5 {SHORTT[t]}", p_["diff_bacc"], AB, "{:+.3f}")
+        (sig if (p_["diff_ci"][0] > 0 or p_["diff_ci"][1] < 0) else nsig).append(SHORTT[t])
+    hi = D["hi"]
+    fam5 = hi["top5_by_family"] if hi else {}
     image(s, FIG / "fig14e_hybrid_vs_cnn.png", 0.4, 1.4, 7.2, 3.3)
     image(s, FIG / "fig14d_gradcam_vs_physics.png", 0.4, 4.75, 7.2, 2.2)
-    hi = D["hi"]
-    gc = D["gc"]
-    top = ", ".join(hi["rank"][:3]) if hi else "n/a"
-    isphys = lambda k: k.startswith("physics") or k in ("image-POD (50 modes)", "POD residual e(x)")
-    phys5 = n("physics groups in hybrid top-5", sum(isphys(k) for k in hi["rank"][:5]), V6 / "hybrid_importance.json", "{:d}") if hi else "n/a"
-    toprank = n("rank of best physics group", 1 + next(i for i, k in enumerate(hi["rank"]) if isphys(k)), V6 / "hybrid_importance.json", "{:d}") if hi else "n/a"
-    rhog = n("Grad-CAM vs physics Spearman", gc["spearman_rho"], V6 / "gradcam_octid_dis750.json", "{:.2f}") if gc else "n/a"
-    bullets(s, [[("Hybrid", {"bold": True}), ": PCA-64 of a frozen embedding + v5 features + image-POD + e(x) → soft vote"],
-                [("OCTID", {"bold": True}), f": {verdict}"],
-                [("Explainability kept", {"bold": True}), f": {phys5} of the top 5 groups are physics; #1 is {hi['rank'][0] if hi else 'n/a'}"],
-                [("Grad-CAM vs physics", {"bold": True}), f": Spearman ρ = {rhog} across band × class cells"]],
-            7.8, 1.5, 5.0, 5.4, size=15)
+    bullets(s, [[("Hybrid", {"bold": True}), ": PCA-64 of frozen ResNet-18 features + 171 physics features + ROM (image-POD, e(x)) → soft vote"],
+                [("vs CNN (paired)", {"bold": True}), f": OCTID {vs_cnn[OCT]}, Kermany {vs_cnn['Kermany 4-class']}, new scanner {vs_cnn[X]}"],
+                [("vs v5", {"bold": True}), f": significant on {', '.join(sig)}; CI includes zero on {', '.join(nsig) or 'none'}"],
+                [("Importance (OCTID only)", {"bold": True}), f": #1 is {hi['rank'][0] if hi else 'n/a'}; top 5 = "
+                 + ", ".join(f"{v} {k}" for k, v in fam5.items()) + ". It shows reliance, not added accuracy"]],
+            7.8, 1.45, 5.0, 5.5, size=14)
     footer(s)
-    notes(s, f"Can we close the gap to the black box without losing the physics? The hybrid takes a frozen DINOv2 network, "
-             f"which was never trained on our labels, compresses its features with PCA inside each training fold, and adds "
-             f"our physics features, the image modes and the residual score. On the honest OCTID task the hybrid reaches "
-             f"{hb} against {cbn} for the fine-tuned CNN on the same folds; the paired result is {verdict}. Permutation "
-             f"importance shows {phys5} physics groups among the top five, with a physics group ranked number {toprank}, so the model still relies on interpretable "
-             f"measurements. The bottom panel compares where the CNN's Grad-CAM attention falls by retinal band with where "
-             f"the physics model finds its information; the rank correlation is {rhog}.")
+    notes(s, f"Can we close the gap to the black box without losing the physics? Our headline hybrid takes a frozen "
+             f"ResNet-18, never trained on our labels, compresses its features with PCA inside each training fold, and adds "
+             f"our physics features plus the two ROM quantities. On OCTID it reaches {hb} against {cbn} for the fine-tuned "
+             f"CNN on the same folds: the difference is {vs_cnn[OCT]}"
+             + (", so not significant" if within else "") + f". On Kermany and on the new scanner the CNN is clearly better. "
+             f"Compared with v5 the hybrid is significantly better on {', '.join(sig)}. Permutation importance, measured on "
+             f"OCTID only, ranks {hi['rank'][0] if hi else 'n/a'} first; importance shows what the model relies on, not what "
+             f"each part adds, which the next slide tests directly. The bottom panel is the Grad-CAM comparison.")
 
-    # ---------------------------------------------------------------- 24 paper vs ours
+    # ---------------------------------------------------------------- 24 ablation
+    s = new_slide(prs)
+    EMB = "ResNet-18 embedding only"
+    md = {t: ab[t]["models"][HY]["bacc"] - ab[t]["models"][EMB]["bacc"] for t in list(mf.TASKS) + [X]}
+    od = [md[t] for t in mf.TASKS if t not in (OCT, X)]
+    lo_, hi2 = n("physics gain min (OCTDL, Kermany)", min(od), AB, "{:+.2f}"), n("physics gain max (OCTDL, Kermany)", max(od), AB, "{:+.2f}")
+    d_oct = n("physics gain OCTID", md[OCT], AB, "{:+.3f}")
+    title(s, f"Physics adds {lo_} to {hi2} on OCTDL and Kermany, nothing on OCTID ({d_oct})")
+    image(s, FIG / "fig14f_ablation.png", 0.4, 1.35, 12.5, 4.35)
+    pe = {t: ab[t]["paired"][f"{HY} vs {EMB}"] for t in list(mf.TASKS) + [X]}
+    sg = [SHORTT[t] for t, p_ in pe.items() if p_["diff_ci"][0] > 0]
+    ns = [SHORTT[t] for t, p_ in pe.items() if not p_["diff_ci"][0] > 0]
+    for t, p_ in pe.items():
+        n(f"paired hybrid - embedding ResNet-18 {SHORTT[t]}", p_["diff_bacc"], AB, "{:+.3f}")
+    dmin = min(ab[t]["models"]["hybrid DINOv2-S"]["bacc"] - ab[t]["models"]["DINOv2-S embedding only"]["bacc"] for t in list(mf.TASKS) + [X])
+    dmax = max(ab[t]["models"]["hybrid DINOv2-S"]["bacc"] - ab[t]["models"]["DINOv2-S embedding only"]["bacc"] for t in list(mf.TASKS) + [X])
+    bullets(s, [[("Same backbone, with and without", {"bold": True}), " the 171 physics features + ROM; mean of 3 seeds, 95% CI"],
+                [("ResNet-18", {"bold": True}), f": significant gain on {', '.join(sg)}; CI includes zero on {', '.join(ns)}"],
+                [("DINOv2-S", {"bold": True}), f": gains {n('DINOv2 physics gain min', dmin, AB, '{:+.2f}')} to {n('DINOv2 physics gain max', dmax, AB, '{:+.2f}')}, because its embedding alone is weaker"]],
+            0.55, 5.8, 12.2, 1.15, size=14)
+    footer(s)
+    notes(s, f"This slide asks the cleaner question: what do the physics features add on top of the deep features? We "
+             f"compare each hybrid with the same frozen embedding used alone, on identical folds. For the ResNet-18 "
+             f"backbone the physics and ROM features add {lo_} to {hi2} balanced accuracy on the OCTDL and Kermany tasks, "
+             f"significant on {', '.join(sg)}. On OCTID they add nothing measurable ({d_oct}); the 272 OCTID scans are "
+             f"already separated well by the embedding alone. For DINOv2 the gain is larger, {dmin:+.2f} to {dmax:+.2f}, "
+             f"because its embedding is weaker on its own. This is the honest measure of the physics contribution; the "
+             f"importance ranking on the previous slide is not.")
+
+    # ---------------------------------------------------------------- 25 paper vs ours: heat map
+    s = new_slide(prs)
+    hb_oct = n("headline hybrid OCTID (heat map)", ab[OCT]["models"][HY]["bacc"], AB)
+    title(s, f"Re-evaluated honestly, the paper's method drops to {pcv} on OCTID diseases; our hybrid reaches {hb_oct}")
+    image(s, FIG / "fig15a_paper_vs_ours.png", 0.55, 1.4, 12.2, 5.15)
+    text(s, 0.55, 6.55, 12.2, 0.35, "Paper as reported · paper's method re-run on the honest task · ours (ResNet-18 hybrid). "
+         "n/a = not reported / not applicable.", size=12, color=INK2)
+    footer(s)
+    notes(s, f"This heat map compares, metric by metric, three things: the paper's reported numbers, the paper's method "
+             f"re-run honestly, and our headline model. On OCTID the paper reports 71 percent accuracy on four classes, "
+             f"which we reproduced. On the honest three-disease task, with one export format and patient-grouped folds, "
+             f"the same method gets {pcv} balanced accuracy, while our hybrid gets {hb_oct}. For triage, the paper's "
+             f"perfect normal recall and precision reappear when we re-run its method, but only because of the scanner "
+             f"confound. On single-scanner data our model's triage numbers are lower than 1.00, but they are real, and "
+             f"conformal prediction can attach a stated guarantee to them.")
+
+    # ---------------------------------------------------------------- 26 paper vs ours: claims
     s = new_slide(prs)
     title(s, "Paper vs our project: the physics idea holds up, the headline claims do not")
-    image(s, FIG / "fig15a_paper_vs_ours.png", 0.4, 1.35, 12.5, 2.6)
     claims = json.load(open(FIG / "claims.json"))
     trs = [["Paper's statement", "What we found", "Verdict"]] + [[c["claim"], c["found"], c["verdict"]] for c in claims]
-    table(s, trs, 0.55, 4.05, 12.2, 2.85, col_w=[3.3, 7.3, 1.6], size=10)
+    table(s, trs, 0.55, 1.45, 12.2, 5.3, col_w=[3.4, 7.1, 1.7], size=13)
     for c in claims:
         n(f"claim: {c['claim'][:50]}", c["verdict"], FIG / "claims.json")
     footer(s)
-    notes(s, "This slide puts the paper and our project side by side, fairly. The heat map compares the paper's reported "
-             "numbers, the paper's method re-evaluated on the honest task, and our best model. The table lists each "
-             "claim with what we found and the result file that supports it. Three things hold: the accuracy reproduces, "
-             "the KT-1 and roughness quantities carry real diagnostic signal once measured in the right anatomical layer, "
-             "and the push for explainable models is well founded. Three things do not hold as stated: the perfect triage "
-             "is a scanner confound, the important grid rows mostly encode retina position, and discarding entropy for "
-             "collinearity actually costs accuracy. A guarantee for triage is possible, but it needs conformal "
-             "prediction and single-scanner data.")
+    notes(s, "This table lists each of the paper's claims with what we found and the result file that supports it; the "
+             "file names are in claims.json in the repository. Three things hold: the accuracy reproduces, the KT-1 and "
+             "roughness quantities carry real diagnostic signal once measured in the right anatomical layer, and the push "
+             "for explainable models is well founded. Three things do not hold as stated: the perfect triage is a scanner "
+             "confound, the important grid rows mostly encode retina position, and discarding entropy for collinearity "
+             "actually costs accuracy. A guarantee for triage is possible, but it needs conformal prediction and "
+             "single-scanner data.")
 
     # ---------------------------------------------------------------- 25 conclusions
     s = new_slide(prs)
     title(s, "Physics features work when measured in anatomy, are honest about uncertainty, and still trail deep models")
-    stat(s, 0.55, 1.5, 3.9, 1.9, f"{p0} → {bo}", "honest OCTID balanced accuracy: paper method → ours")
+    stat(s, 0.55, 1.5, 3.9, 1.9, f"{p0} → {bo}", "honest OCTID balanced accuracy: paper method → ResNet-18 hybrid")
     stat(s, 4.7, 1.5, 3.9, 1.9, cov, "diseased eyes kept by conformal triage (target 0.95, OCTDL)")
     stat(s, 8.85, 1.5, 3.9, 1.9, cb, "best balanced accuracy on an unseen scanner")
     text(s, 0.55, 3.7, 6.0, 0.4, "Takeaways", size=18, font=HEAD, bold=True, color=ACCENT)
     bullets(s, ["Validate the data first: a scanner confound produced the paper's perfect triage",
                 "Measure physics in an anatomical frame; NDT tools (pulse-echo, MAPOD, calibration) transfer well",
-                "Replace 'guaranteed' with conformal guarantees that state their assumption"],
+                "Replace 'guaranteed' with conformal guarantees that state their assumption",
+                "Frozen deep features + physics beat either alone on OCTDL and Kermany; a fine-tuned CNN is still best"],
             0.55, 4.15, 6.0, 2.8, size=15)
     text(s, 6.8, 3.7, 6.0, 0.4, "Limits and next steps", size=18, font=HEAD, bold=True, color=ACCENT)
     bullets(s, ["2-D B-scans only; disease is 3-D (volumes would allow the paper's 3-D anisotropy idea)",
