@@ -14,7 +14,8 @@
 IIT Gandhinagar · NDT course project.
 
 - **Built on** Tanushka Sonde's original repository, [Tanushka-Sonde/Multi-Parametric-Retinal-Diagnostics](https://github.com/Tanushka-Sonde/Multi-Parametric-Retinal-Diagnostics). Its full git history is kept here, so every original commit stays credited.
-- **Original paper:** R. Banerjee, S. Sarkar, P. Munshi, *Multi-Parametric Retinal Diagnostics: A Deterministic Physics-Based Engine for Tomographic Classification*, IIT Gandhinagar. (The PDF in this repo, [`pdf&rendition=1.pdf`](pdf%26rendition%3D1.pdf), is the KT-1 reference paper by Athe et al. 2013, not the Banerjee paper.)
+- **Original paper:** R. Banerjee, S. Sarkar, P. Munshi, *Multi-Parametric Retinal Diagnostics: A Deterministic Physics-Based Engine for Tomographic Classification*, IIT Gandhinagar. PDF: [`paper/Banerjee_Sarkar_Munshi_2025.pdf`](paper/Banerjee_Sarkar_Munshi_2025.pdf).
+- **KT-1 reference:** P. Athe, S. Shakya, P. Munshi, A. Luke, D. Mewes, *Characterization of multiphase flow in bubble columns using KT-1 signature and fractal dimension*, Flow Meas. Instrum. 33, 122–137, 2013. PDF: [`paper/Athe_et_al_2013_KT1_fractal.pdf`](paper/Athe_et_al_2013_KT1_fractal.pdf).
 - License: [MIT](LICENSE).
 
 ---
